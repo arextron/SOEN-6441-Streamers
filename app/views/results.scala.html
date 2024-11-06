@@ -1,18 +1,31 @@
-@(query: String, videos: java.util.List[controllers.VideoResult])
+@(searchHistory: LinkedList[java.util.Map.Entry[String, java.util.List[controllers.VideoResult]]])
 
 @import scala.jdk.CollectionConverters._
-@import controllers.VideoResult
 
 @main("Search Results") {
-    <h2>Results for "@query"</h2>
-    <div>
-    @for(video <- videos.asScala) {
-        <div>
-            <h3><a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a></h3>
-            <p>@video.getDescription()</p>
-            <a href="@video.getChannelUrl()" target="_blank">Channel</a>
-            <img src="@video.getThumbnailUrl()" alt="Thumbnail">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2>Welcome to YT Lytics</h2>
+    </div>
+    <form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
+        <input type="text" name="query" placeholder="Enter search terms" required>
+        <button type="submit" style="padding: 5px 10px;">Go!</button>
+    </form>
+
+    @for(entry <- searchHistory.asScala) {
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+            <h3>Search terms: @entry.getKey</h3>
+            <p>Displaying results for "@entry.getKey"</p>
+
+            <ol>
+            @for(video <- entry.getValue.asScala) {
+                <li>
+                    <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>,
+                    <strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelUrl()</a>
+                    <p><strong>Description:</strong> "@video.getDescription()"</p>
+                    <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+                </li>
+            }
+            </ol>
         </div>
     }
-    </div>
 }

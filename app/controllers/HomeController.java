@@ -4,14 +4,16 @@ import play.mvc.*;
 import views.html.index;
 import views.html.results;
 
+
 import javax.inject.Inject;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
+    private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
     @Inject
     public HomeController(YouTubeService youTubeService) {
@@ -32,8 +34,16 @@ public class HomeController extends Controller {
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideos(query);
 
-            // Pass the Java List directly to the render method
-            return ok(views.html.results.render(query, videos));
+            // Add the new search query and its results at the start of the list
+            searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, videos));
+
+            // Keep only the latest 10 search queries
+            if (searchHistory.size() > 10) {
+                searchHistory.removeLast();
+            }
+
+            // Render the results page with the search history
+            return ok(results.render(searchHistory));
         });
     }
 }
