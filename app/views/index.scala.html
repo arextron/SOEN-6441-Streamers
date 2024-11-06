@@ -1,0 +1,9 @@
+@()
+
+  @main("TubeLytics") {
+    <h1>Welcome to TubeLytics</h1>
+    <form action="@routes.HomeController.search().url" method="get">
+      <input type="text" name="query" placeholder="Enter search keywords" required>
+      <button type="submit">Search</button>
+    </form>
+  }

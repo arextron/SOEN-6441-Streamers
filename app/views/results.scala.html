@@ -1,0 +1,18 @@
+@(query: String, videos: java.util.List[controllers.VideoResult])
+
+@import scala.jdk.CollectionConverters._
+@import controllers.VideoResult
+
+@main("Search Results") {
+    <h2>Results for "@query"</h2>
+    <div>
+    @for(video <- videos.asScala) {
+        <div>
+            <h3><a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a></h3>
+            <p>@video.getDescription()</p>
+            <a href="@video.getChannelUrl()" target="_blank">Channel</a>
+            <img src="@video.getThumbnailUrl()" alt="Thumbnail">
+        </div>
+    }
+    </div>
+}
