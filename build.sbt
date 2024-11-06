@@ -3,6 +3,7 @@ ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / version := "1.0-SNAPSHOT"
 
 javacOptions ++= Seq("-source", "11", "-target", "11")
+javaOptions += "-Dhttp.port=9001"
 lazy val root = (project in file("."))
   .enablePlugins(PlayJava)
   .settings(
