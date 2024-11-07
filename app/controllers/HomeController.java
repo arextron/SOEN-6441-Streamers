@@ -3,7 +3,8 @@ package controllers;
 import play.mvc.*;
 import views.html.index;
 import views.html.results;
-
+import views.html.videoDetails;
+import views.html.searchResults;
 
 import javax.inject.Inject;
 import java.util.*;
@@ -44,6 +45,22 @@ public class HomeController extends Controller {
 
             // Render the results page with the search history
             return ok(results.render(searchHistory));
+        });
+    }
+
+    // Show video details, including tags
+    public CompletionStage<Result> showVideoDetails(String videoId) {
+        return CompletableFuture.supplyAsync(() -> {
+            VideoResult video = youTubeService.getVideoDetails(videoId);
+            return ok(videoDetails.render(video));
+        });
+    }
+
+    // Search videos by tag
+    public CompletionStage<Result> searchByTag(String tag) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
+            return ok(searchResults.render(tag, videos));
         });
     }
 }
