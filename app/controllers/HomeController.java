@@ -100,9 +100,14 @@ public class HomeController extends Controller {
     public CompletionStage<Result> showVideoDetails(String videoId) {
         return CompletableFuture.supplyAsync(() -> {
             VideoResult video = youTubeService.getVideoDetails(videoId);
+            if (video == null) {
+                return notFound("Video not found");
+            }
             return ok(videoDetails.render(video));
         });
     }
+
+
 
     // Search videos by tag
     public CompletionStage<Result> searchByTag(String tag) {
