@@ -1,14 +1,17 @@
 package controllers;
 
 import play.mvc.*;
+import views.html.channelProfile;
 import views.html.index;
 import views.html.results;
-
+import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HomeController extends Controller {
 
@@ -23,6 +26,8 @@ public class HomeController extends Controller {
     public HomeController(YouTubeService youTubeService) {
         this.youTubeService = youTubeService;
     }
+
+    private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
     // Render the homepage with the search box
     public Result index() {
@@ -58,6 +63,7 @@ public class HomeController extends Controller {
             return ok(results.render(searchHistory));
         });
     }
+
     public CompletionStage<Result> wordStats(String query) {
         // Validate the query parameter
         if (query == null || query.trim().isEmpty()) {
@@ -99,6 +105,21 @@ public class HomeController extends Controller {
                 // Log the exception (optional)
                 e.printStackTrace();
                 return internalServerError("An error occurred while processing your request.");
+            }
+        });
+    }
+
+    // Channel profile page
+    public CompletionStage<Result> channelProfile(String channelId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Channel channel = youTubeService.getChannelProfile(channelId);
+                List<VideoResult> latestVideos = youTubeService.getLatestVideosByChannel(channelId, 10);
+                return ok(channelProfile.render(channel, latestVideos));
+            } catch (Exception e) {
+                // Log the exception instead of using printStackTrace
+                logger.error("Failed to fetch channel information for channel ID: " + channelId, e);
+                return internalServerError("Unable to fetch channel information");
             }
         });
     }

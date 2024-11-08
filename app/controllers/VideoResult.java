@@ -1,5 +1,7 @@
 package controllers;
 
+import java.nio.channels.Channel;
+
 public class VideoResult {
     private String title;
     private String description;
@@ -34,4 +36,7 @@ public class VideoResult {
     public String getThumbnailUrl() {
         return thumbnailUrl;
     }
+
+    public String getChannelId(){return channelId;}
+
 }

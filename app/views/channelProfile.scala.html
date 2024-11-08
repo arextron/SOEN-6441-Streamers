@@ -1,0 +1,20 @@
+@(channel: com.google.api.services.youtube.model.Channel, latestVideos: List[controllers.VideoResult])
+
+@main("Channel Profile") {
+    <h2>@channel.getSnippet().getTitle()</h2>
+    <p><strong>Description:</strong> @channel.getSnippet().getDescription()</p>
+    <p><strong>Subscribers:</strong> @channel.getStatistics().getSubscriberCount()</p>
+    <p><strong>Videos:</strong> @channel.getStatistics().getVideoCount()</p>
+    <p><strong>Views:</strong> @channel.getStatistics().getViewCount()</p>
+
+    <h3>Latest Videos</h3>
+    <ol>
+    @for(video <- latestVideos.asScala) {
+        <li>
+            <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+            <p><strong>Description:</strong> "@video.getDescription()"</p>
+            <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+        </li>
+    }
+    </ol>
+}
