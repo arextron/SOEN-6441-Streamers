@@ -19,6 +19,9 @@ import org.slf4j.LoggerFactory;
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
+    // Cache for storing search results
+    private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
     @Inject
@@ -39,6 +42,19 @@ public class HomeController extends Controller {
             return CompletableFuture.completedFuture(ok("Please provide a search query."));
         }
 
+        // Check cache for the query
+        if (videoCache.containsKey(query)) {
+            // Return cached result
+            List<VideoResult> cachedVideos = videoCache.get(query);
+            // Add to search history as usual
+            searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, cachedVideos));
+            if (searchHistory.size() > 10) {
+                searchHistory.removeLast();
+            }
+            return CompletableFuture.completedFuture(ok(results.render(searchHistory)));
+        }
+
+        // If not in cache, fetch from YouTube API and store in cache
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideos(query);
 
@@ -47,6 +63,9 @@ public class HomeController extends Controller {
                     .filter(video -> !video.getDescription().isEmpty())
                     .limit(10)
                     .collect(Collectors.toList());
+
+            // Store the result in the cache
+            videoCache.put(query, processedVideos);
 
             // Add to search history
             searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
@@ -57,6 +76,7 @@ public class HomeController extends Controller {
             return ok(results.render(searchHistory));
         });
     }
+
 
     // Show video details, including tags
     public CompletionStage<Result> showVideoDetails(String videoId) {
