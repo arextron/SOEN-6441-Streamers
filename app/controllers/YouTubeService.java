@@ -3,15 +3,12 @@ package controllers;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
-import com.google.api.services.youtube.model.Channel;
-import com.google.api.services.youtube.model.ChannelListResponse;
-import com.google.api.services.youtube.model.SearchResult;
-import com.google.api.services.youtube.model.SearchListResponse;
-
+import com.google.api.services.youtube.model.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
 
 public class YouTubeService {
     private static final String API_KEY = "AIzaSyDDresrMUXm0WOThwntrZDEt8pL3j4dOsA"; // Replace with your actual API key
@@ -23,12 +20,13 @@ public class YouTubeService {
     public YouTubeService(YouTube youtube) {
         this.youtube = youtube;
     }
+
     public YouTubeService() {
         try {
             youtube = new YouTube.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     JacksonFactory.getDefaultInstance(),
-                    null // No need for an HttpRequestInitializer
+                    null
             ).setApplicationName(APPLICATION_NAME).build();
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize YouTube client", e);
@@ -39,7 +37,7 @@ public class YouTubeService {
     public Channel getChannelProfile(String channelId) throws IOException {
         YouTube.Channels.List request = youtube.channels().list("snippet,statistics");
         request.setId(channelId);
-        request.setKey(API_KEY); // Set the API key
+        request.setKey(API_KEY);
 
         ChannelListResponse response = request.execute();
         if (response.getItems().isEmpty()) {
@@ -54,24 +52,20 @@ public class YouTubeService {
         request.setChannelId(channelId);
         request.setMaxResults((long) limit);
         request.setOrder("date");
-        request.setKey(API_KEY); // Set the API key
+        request.setKey(API_KEY);
 
         List<SearchResult> searchResults = request.execute().getItems();
 
-        // Log each video's title and medium resolution thumbnail URL to check for duplicates
         for (SearchResult result : searchResults) {
             System.out.println("Video Title: " + result.getSnippet().getTitle());
             System.out.println("Thumbnail URL: " + result.getSnippet().getThumbnails().getMedium().getUrl());
         }
 
         return searchResults.stream()
-                .map(result -> new VideoResult(
-                        result.getSnippet().getTitle(),
-                        result.getSnippet().getDescription(),
-                        result.getId().getVideoId(),
-                        channelId,
-                        result.getSnippet().getThumbnails().getMedium().getUrl() // Use medium resolution thumbnail
-                ))
+                .map(result -> {
+                    String videoId = result.getId().getVideoId();
+                    return getVideoDetails(videoId); // Fetch video details including tags
+                })
                 .collect(Collectors.toList());
     }
 
@@ -83,7 +77,60 @@ public class YouTubeService {
             search.setQ(query);
             search.setMaxResults(MAX_RESULTS);
             search.setType("video");
-            search.setKey(API_KEY); // Ensure API key is set
+            search.setKey(API_KEY);
+
+            SearchListResponse response = search.execute();
+            List<SearchResult> results = response.getItems();
+
+            for (SearchResult result : results) {
+                String videoId = result.getId().getVideoId();
+                VideoResult videoDetail = getVideoDetails(videoId); // Fetch detailed info including tags
+                if (videoDetail != null) {
+                    videoResults.add(videoDetail);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return videoResults;
+    }
+
+    // Get video details including tags
+    public VideoResult getVideoDetails(String videoId) {
+        try {
+            YouTube.Videos.List request = youtube.videos().list("snippet");
+            request.setId(videoId);
+            request.setKey(API_KEY);
+
+            VideoListResponse response = request.execute();
+            if (response.getItems().isEmpty()) {
+                return null; // Video not found
+            }
+
+            Video video = response.getItems().get(0);
+            String title = video.getSnippet().getTitle();
+            String description = video.getSnippet().getDescription();
+            String channelId = video.getSnippet().getChannelId();
+            String channelTitle = video.getSnippet().getChannelTitle();
+            String thumbnailUrl = video.getSnippet().getThumbnails().getDefault().getUrl();
+            List<String> tags = video.getSnippet().getTags() != null ? video.getSnippet().getTags() : new ArrayList<>();
+
+            return new VideoResult(title, description, videoId, channelId, thumbnailUrl, channelTitle, tags);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Search videos by tag
+    public List<VideoResult> searchVideosByTag(String tag) {
+        List<VideoResult> videoResults = new ArrayList<>();
+        try {
+            YouTube.Search.List search = youtube.search().list("snippet");
+            search.setQ(tag); // Use the tag as the search query
+            search.setType("video");
+            search.setMaxResults(MAX_RESULTS);
+            search.setKey(API_KEY);
 
             SearchListResponse response = search.execute();
             List<SearchResult> results = response.getItems();
@@ -93,9 +140,11 @@ public class YouTubeService {
                 String description = result.getSnippet().getDescription();
                 String videoId = result.getId().getVideoId();
                 String channelId = result.getSnippet().getChannelId();
-                String thumbnailUrl = result.getSnippet().getThumbnails().getMedium().getUrl(); // Use medium resolution
+                String thumbnailUrl = result.getSnippet().getThumbnails().getDefault().getUrl();
+                String channelTitle = result.getSnippet().getChannelTitle();
+                List<String> tags = new ArrayList<>(); // Tags can be empty in search results
 
-                videoResults.add(new VideoResult(title, description, videoId, channelId, thumbnailUrl));
+                videoResults.add(new VideoResult(title, description, videoId, channelId, thumbnailUrl, channelTitle, tags));
             }
         } catch (IOException e) {
             e.printStackTrace();
