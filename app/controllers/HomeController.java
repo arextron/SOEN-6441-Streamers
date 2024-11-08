@@ -1,6 +1,7 @@
 package controllers;
 
 import play.mvc.*;
+import play.cache.SyncCacheApi;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
@@ -19,25 +20,33 @@ import org.slf4j.LoggerFactory;
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
-    private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
-
-    @Inject
-    public HomeController(YouTubeService youTubeService) {
-        this.youTubeService = youTubeService;
-    }
-
+    private final SyncCacheApi cache;
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
+    @Inject
+    public HomeController(YouTubeService youTubeService, SyncCacheApi cache) {
+        this.youTubeService = youTubeService;
+        this.cache = cache;
+    }
+
     // Render the homepage with the search box
-    public Result index() {
+    public Result index(Http.Request request) {
         return ok(index.render());
     }
 
-    // Handle search request and display video results
-    public CompletionStage<Result> search(String query) {
+    // Handle search request and display video results with session-specific history
+    public CompletionStage<Result> search(String query, Http.Request request) {
         if (query == null || query.isEmpty()) {
             return CompletableFuture.completedFuture(ok("Please provide a search query."));
         }
+
+        // Get or create a session ID
+        String sessionId = request.session().getOptional("sessionId").orElseGet(() -> {
+            String id = UUID.randomUUID().toString();
+            request.session().adding("sessionId", id);
+            return id;
+        });
+        String cacheKey = "searchHistory_" + sessionId;
 
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideos(query);
@@ -48,13 +57,21 @@ public class HomeController extends Controller {
                     .limit(10)
                     .collect(Collectors.toList());
 
-            // Add to search history
+            // Retrieve or initialize session-specific search history
+            LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = cache.getOptional(cacheKey)
+                    .map(obj -> (LinkedList<Map.Entry<String, List<VideoResult>>>) obj)
+                    .orElseGet(LinkedList::new);
+
+            // Add to session-specific search history
             searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
             if (searchHistory.size() > 10) {
                 searchHistory.removeLast();
             }
 
-            return ok(results.render(searchHistory));
+            // Save the updated history in cache
+            cache.set(cacheKey, searchHistory);
+
+            return ok(results.render(searchHistory)).addingToSession(request, "sessionId", sessionId);
         });
     }
 
