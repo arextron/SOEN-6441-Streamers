@@ -9,16 +9,16 @@ lazy val root = (project in file("."))
     name := """TubeLyticsv2""",
     libraryDependencies ++= Seq(
       guice,
-        "com.typesafe.play" %% "play" % "2.8.18",
-        "com.typesafe.play" %% "play-guice" % "2.8.18", // For dependency injection
-        "com.google.apis" % "google-api-services-youtube" % "v3-rev222-1.25.0", // YouTube API
-        "org.mockito" % "mockito-core" % "4.5.1", // For testing
-        "org.mockito" % "mockito-inline" % "4.5.1" % Test,
-        "junit" % "junit" % "4.13.2" % Test, // JUnit for tests
-        "org.mockito" %% "mockito-scala" % "1.16.55" % Test,
-        "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
-        "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
-        ),
+      "com.typesafe.play" %% "play" % "2.8.18",
+      "com.typesafe.play" %% "play-guice" % "2.8.18", // For dependency injection
+      "com.google.apis" % "google-api-services-youtube" % "v3-rev222-1.25.0", // YouTube API
+      "org.mockito" % "mockito-core" % "4.5.1", // For testing
+      "org.mockito" % "mockito-inline" % "4.5.1" % Test,
+      "junit" % "junit" % "4.13.2" % Test, // JUnit for tests
+      "org.mockito" %% "mockito-scala" % "1.16.55" % Test,
+      "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
+    ),
     jacocoExcludes := Seq(
       "views.*",
       "router.*",
