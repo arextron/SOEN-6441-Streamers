@@ -1,13 +1,12 @@
 package controllers;
 
 import play.mvc.*;
-import play.cache.SyncCacheApi;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
 import views.html.searchResults;
 import views.html.channelProfile;
-
+import play.cache.SyncCacheApi;
 import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
 import java.util.*;
@@ -22,6 +21,10 @@ public class HomeController extends Controller {
     private final YouTubeService youTubeService;
     private final SyncCacheApi cache;
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
+    // Cache for storing search results
+    private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+
+    private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
     @Inject
     public HomeController(YouTubeService youTubeService, SyncCacheApi cache) {
@@ -48,6 +51,19 @@ public class HomeController extends Controller {
         });
         String cacheKey = "searchHistory_" + sessionId;
 
+        // Check cache for the query
+        if (videoCache.containsKey(query)) {
+            // Return cached result
+            List<VideoResult> cachedVideos = videoCache.get(query);
+            // Add to search history as usual
+            searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, cachedVideos));
+            if (searchHistory.size() > 10) {
+                searchHistory.removeLast();
+            }
+            return CompletableFuture.completedFuture(ok(results.render(searchHistory)));
+        }
+
+        // If not in cache, fetch from YouTube API and store in cache
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideos(query);
 
@@ -63,6 +79,10 @@ public class HomeController extends Controller {
                     .orElseGet(LinkedList::new);
 
             // Add to session-specific search history
+            // Store the result in the cache
+            videoCache.put(query, processedVideos);
+
+            // Add to search history
             searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
             if (searchHistory.size() > 10) {
                 searchHistory.removeLast();
@@ -74,6 +94,7 @@ public class HomeController extends Controller {
             return ok(results.render(searchHistory)).addingToSession(request, "sessionId", sessionId);
         });
     }
+
 
     // Show video details, including tags
     public CompletionStage<Result> showVideoDetails(String videoId) {

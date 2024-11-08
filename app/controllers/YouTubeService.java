@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
 public class YouTubeService {
     private static final String API_KEY = "AIzaSyDDresrMUXm0WOThwntrZDEt8pL3j4dOsA"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
@@ -55,11 +54,6 @@ public class YouTubeService {
         request.setKey(API_KEY);
 
         List<SearchResult> searchResults = request.execute().getItems();
-
-        for (SearchResult result : searchResults) {
-            System.out.println("Video Title: " + result.getSnippet().getTitle());
-            System.out.println("Thumbnail URL: " + result.getSnippet().getThumbnails().getMedium().getUrl());
-        }
 
         return searchResults.stream()
                 .map(result -> {
