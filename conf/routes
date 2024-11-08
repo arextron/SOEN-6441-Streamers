@@ -1,13 +1,7 @@
 # Routes
 # This file defines all application routes (Higher priority routes first)
+# ~~~~
 
-
-# Home page and search functionality
-GET     /                       controllers.HomeController.index
-GET     /search                 controllers.HomeController.search(query: String ?= "")
+GET     /                 controllers.HomeController.index
+GET     /search           controllers.HomeController.search(query: String ?= "")
 GET     /wordStats        controllers.HomeController.wordStats(query: String)
-# Route to display video details including tags
-GET     /video/tags/:videoId    controllers.HomeController.showVideoDetails(videoId: String)
-
-# Route to search and display videos by tag
-GET     /search/tag/:tag        controllers.HomeController.searchByTag(tag: String)

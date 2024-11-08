@@ -3,8 +3,7 @@ package controllers;
 import play.mvc.*;
 import views.html.index;
 import views.html.results;
-import views.html.videoDetails;
-import views.html.searchResults;
+
 import javax.inject.Inject;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -59,20 +58,6 @@ public class HomeController extends Controller {
             return ok(results.render(searchHistory));
         });
     }
-    // Show video details, including tags
-    public CompletionStage<Result> showVideoDetails(String videoId) {
-        return CompletableFuture.supplyAsync(() -> {
-            VideoResult video = youTubeService.getVideoDetails(videoId);
-            return ok(videoDetails.render(video));
-        });
-    }
-
-    // Search videos by tag
-    public CompletionStage<Result> searchByTag(String tag) {
-        return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
-            return ok(searchResults.render(tag, videos));
-
     public CompletionStage<Result> wordStats(String query) {
         // Validate the query parameter
         if (query == null || query.trim().isEmpty()) {
