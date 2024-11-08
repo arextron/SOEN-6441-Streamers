@@ -57,4 +57,6 @@ public class VideoResult {
     public List<String> getTags() {
         return tags;
     }
+
+    public String getVideoId() { return videoId;}
 }
