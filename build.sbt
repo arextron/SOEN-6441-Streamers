@@ -3,14 +3,17 @@ ThisBuild / version := "1.0-SNAPSHOT"
 
 javacOptions ++= Seq("-source", "11", "-target", "11")
 javaOptions += "-Dhttp.port=9001"
+
 lazy val root = (project in file("."))
   .enablePlugins(PlayJava)
   .settings(
     name := """TubeLyticsv2""",
     libraryDependencies ++= Seq(
       guice,
+      "com.typesafe.play" %% "play-cache" % "2.8.18",
       "com.typesafe.play" %% "play" % "2.8.18",
       "com.typesafe.play" %% "play-guice" % "2.8.18", // For dependency injection
+      "com.typesafe.play" %% "play-ehcache" % "2.8.18", // Ehcache for caching
       "com.google.apis" % "google-api-services-youtube" % "v3-rev222-1.25.0", // YouTube API
       "org.mockito" % "mockito-core" % "4.5.1", // For testing
       "org.mockito" % "mockito-inline" % "4.5.1" % Test,
@@ -30,9 +33,4 @@ lazy val root = (project in file("."))
       ".*\\.template\\.scala",
       ".*\\$Lambda\\$.*" // Exclude synthetic lambda classes
     )
-
-
   )
-
-
-
