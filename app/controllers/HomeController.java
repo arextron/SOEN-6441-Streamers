@@ -15,6 +15,10 @@ public class HomeController extends Controller {
     private final YouTubeService youTubeService;
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
+    public LinkedList<Map.Entry<String, List<VideoResult>>> getSearchHistory() {
+        return searchHistory;
+    }
+
     @Inject
     public HomeController(YouTubeService youTubeService) {
         this.youTubeService = youTubeService;
@@ -49,32 +53,53 @@ public class HomeController extends Controller {
             if (searchHistory.size() > 10) {
                 searchHistory.removeLast();
             }
+
             // Render the results page with the processed search history
             return ok(results.render(searchHistory));
         });
     }
     public CompletionStage<Result> wordStats(String query) {
+        // Validate the query parameter
+        if (query == null || query.trim().isEmpty()) {
+            return CompletableFuture.completedFuture(
+                    Results.badRequest("Please provide a search query.")
+            );
+        }
+
         return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideos(query);
+            try {
+                List<VideoResult> videos = youTubeService.searchVideos(query);
 
-            // Process word frequencies using Java Streams
-            Map<String, Long> wordFrequency = videos.stream()
-                    .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+"))) // Split by non-word characters
-                    .map(String::toLowerCase) // Normalize words to lowercase
-                    .filter(word -> !word.isEmpty()) // Remove empty words
-                    .collect(Collectors.groupingBy(word -> word, Collectors.counting())); // Count occurrences
+                // Check if any videos were found
+                if (videos.isEmpty()) {
+                    return ok("No word frequency data available for \"" + query + "\".");
+                }
 
-            // Sort words by frequency in descending order and limit to top 50
-            Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
-                    .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                    .limit(50)
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, e2) -> e1,
-                            LinkedHashMap::new
-                    ));
-            return ok(views.html.wordStats.render(query, sortedWordFrequency));
+                // Process word frequencies using Java Streams
+                Map<String, Long> wordFrequency = videos.stream()
+                        .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+"))) // Split by non-word characters
+                        .map(String::toLowerCase) // Normalize words to lowercase
+                        .filter(word -> !word.isEmpty()) // Remove empty words
+                        .collect(Collectors.groupingBy(word -> word, Collectors.counting())); // Count occurrences
+
+                // Sort words by frequency in descending order and limit to top 100
+                Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
+                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                        .limit(100)
+                        .collect(Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue,
+                                (e1, e2) -> e1,
+                                LinkedHashMap::new
+                        ));
+
+                // Render the word statistics view
+                return ok(views.html.wordStats.render(query, sortedWordFrequency));
+            } catch (Exception e) {
+                // Log the exception (optional)
+                e.printStackTrace();
+                return internalServerError("An error occurred while processing your request.");
+            }
         });
     }
 }

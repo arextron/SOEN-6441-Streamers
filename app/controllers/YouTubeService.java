@@ -15,6 +15,9 @@ public class YouTubeService {
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
+    public YouTubeService(YouTube youtube) {
+        this.youtube = youtube;
+    }
 
     public YouTubeService() {
         // Initialize the YouTube instance
