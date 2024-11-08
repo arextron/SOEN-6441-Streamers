@@ -21,8 +21,8 @@
             <ol>
             @for(video <- entry.getValue.asScala) {
                 <li>
-                    <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>,
-                    <strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">Channel</a>
+                    <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+                    <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">Channel Profile </a>
                     <p><strong>Description:</strong> "@video.getDescription()"</p>
                     <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
                 </li>

@@ -5,3 +5,4 @@
 GET     /                 controllers.HomeController.index
 GET     /search           controllers.HomeController.search(query: String ?= "")
 GET     /wordStats        controllers.HomeController.wordStats(query: String)
+GET     /channelProfile   controllers.HomeController.channelProfile(channelId: String)
