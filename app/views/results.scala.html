@@ -3,31 +3,41 @@
 @import scala.jdk.CollectionConverters._
 
 @main("Search Results") {
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h2>Welcome to YT Lytics</h2>
-    </div>
+<div style="text-align: center; margin-bottom: 20px;">
+    <h2>Welcome to YT Lytics</h2>
+</div>
 
-    <form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
-        <input type="text" name="query" placeholder="Enter search terms" required>
-        <button type="submit" style="padding: 5px 10px;">Go!</button>
-    </form>
+<form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
+    <input type="text" name="query" placeholder="Enter search terms" required>
+    <button type="submit" style="padding: 5px 10px;">Go!</button>
+</form>
 
-    @for(entry <- searchHistory.asScala) {
-        <div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-            <h3>Search terms: @entry.getKey</h3>
-            <p>Displaying results for "@entry.getKey"</p>
-            <a href="@routes.HomeController.wordStats(entry.getKey)">View Word Statistics</a>
+@for(entry <- searchHistory.asScala) {
+<div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+    <h3>Search terms: @entry.getKey</h3>
+    <p>Displaying results for "@entry.getKey"</p>
+    <a href="@routes.HomeController.wordStats(entry.getKey)">View Word Statistics</a>
 
-            <ol>
-            @for(video <- entry.getValue.asScala) {
-                <li>
-                    <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
-                    <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">Channel Profile </a>
-                    <p><strong>Description:</strong> "@video.getDescription()"</p>
-                    <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
-                </li>
+    <ol>
+        @for(video <- entry.getValue.asScala) {
+        <li>
+            <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+            <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">Channel Profile</a><br>
+            <p><strong>Description:</strong> @video.getDescription()</p>
+            <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+
+            <!-- Tags Section -->
+            @if(video.getTags() != null && video.getTags().nonEmpty) {
+            <p><strong>Tags:</strong>
+                @for(tag <- video.getTags().asScala) {
+                <a href="@routes.HomeController.searchByTag(tag)">@tag</a>
+                @if(tag != video.getTags().asScala.last) { , }
+                }
+            </p>
             }
-            </ol>
-        </div>
-    }
+        </li>
+        }
+    </ol>
+</div>
+}
 }

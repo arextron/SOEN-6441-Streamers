@@ -1,9 +1,12 @@
 package controllers;
 
 import play.mvc.*;
-import views.html.channelProfile;
 import views.html.index;
 import views.html.results;
+import views.html.videoDetails;
+import views.html.searchResults;
+import views.html.channelProfile;
+
 import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
 import java.util.*;
@@ -17,10 +20,6 @@ public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
-
-    public LinkedList<Map.Entry<String, List<VideoResult>>> getSearchHistory() {
-        return searchHistory;
-    }
 
     @Inject
     public HomeController(YouTubeService youTubeService) {
@@ -43,29 +42,40 @@ public class HomeController extends Controller {
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideos(query);
 
-            // Use Java Streams to process the videos list:
-            // - Filter videos with non-empty descriptions
-            // - Limit the list to the first 10 videos
+            // Process videos and limit to first 10 with non-empty descriptions
             List<VideoResult> processedVideos = videos.stream()
-                    .filter(video -> !video.getDescription().isEmpty()) // Filter out videos with empty descriptions
-                    .limit(10) // Limit to the first 10 videos
+                    .filter(video -> !video.getDescription().isEmpty())
+                    .limit(10)
                     .collect(Collectors.toList());
 
-            // Add the processed video list with the search query to searchHistory
+            // Add to search history
             searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
-
-            // Keep only the latest 10 search queries in history
             if (searchHistory.size() > 10) {
                 searchHistory.removeLast();
             }
 
-            // Render the results page with the processed search history
             return ok(results.render(searchHistory));
         });
     }
 
+    // Show video details, including tags
+    public CompletionStage<Result> showVideoDetails(String videoId) {
+        return CompletableFuture.supplyAsync(() -> {
+            VideoResult video = youTubeService.getVideoDetails(videoId);
+            return ok(videoDetails.render(video));
+        });
+    }
+
+    // Search videos by tag
+    public CompletionStage<Result> searchByTag(String tag) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
+            return ok(searchResults.render(tag, videos));
+        });
+    }
+
+    // Generate word statistics for a query
     public CompletionStage<Result> wordStats(String query) {
-        // Validate the query parameter
         if (query == null || query.trim().isEmpty()) {
             return CompletableFuture.completedFuture(
                     Results.badRequest("Please provide a search query.")
@@ -76,19 +86,16 @@ public class HomeController extends Controller {
             try {
                 List<VideoResult> videos = youTubeService.searchVideos(query);
 
-                // Check if any videos were found
                 if (videos.isEmpty()) {
                     return ok("No word frequency data available for \"" + query + "\".");
                 }
 
-                // Process word frequencies using Java Streams
                 Map<String, Long> wordFrequency = videos.stream()
-                        .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+"))) // Split by non-word characters
-                        .map(String::toLowerCase) // Normalize words to lowercase
-                        .filter(word -> !word.isEmpty()) // Remove empty words
-                        .collect(Collectors.groupingBy(word -> word, Collectors.counting())); // Count occurrences
+                        .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+")))
+                        .map(String::toLowerCase)
+                        .filter(word -> !word.isEmpty())
+                        .collect(Collectors.groupingBy(word -> word, Collectors.counting()));
 
-                // Sort words by frequency in descending order and limit to top 100
                 Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
                         .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                         .limit(100)
@@ -99,17 +106,15 @@ public class HomeController extends Controller {
                                 LinkedHashMap::new
                         ));
 
-                // Render the word statistics view
                 return ok(views.html.wordStats.render(query, sortedWordFrequency));
             } catch (Exception e) {
-                // Log the exception (optional)
-                e.printStackTrace();
+                logger.error("Error processing word statistics for query: " + query, e);
                 return internalServerError("An error occurred while processing your request.");
             }
         });
     }
 
-    // Channel profile page
+    // Channel profile page with latest videos
     public CompletionStage<Result> channelProfile(String channelId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -117,7 +122,6 @@ public class HomeController extends Controller {
                 List<VideoResult> latestVideos = youTubeService.getLatestVideosByChannel(channelId, 10);
                 return ok(channelProfile.render(channel, latestVideos));
             } catch (Exception e) {
-                // Log the exception instead of using printStackTrace
                 logger.error("Failed to fetch channel information for channel ID: " + channelId, e);
                 return internalServerError("Unable to fetch channel information");
             }

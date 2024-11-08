@@ -1,0 +1,29 @@
+@(video: controllers.VideoResult)
+
+@import scala.jdk.CollectionConverters._
+
+@main("Video Details") {
+<div style="text-align: center; margin-bottom: 20px;">
+    <h2>@video.getTitle()</h2>
+</div>
+
+<div style="text-align: center; margin-bottom: 20px;">
+    <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 300px; height: auto;">
+</div>
+
+<div style="margin-bottom: 20px;">
+    <p><strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a></p>
+    <p><strong>Description:</strong> @video.getDescription()</p>
+</div>
+
+<h3>Tags:</h3>
+<ul>
+    @for(tag <- video.getTags().asScala) {
+    <li><a href="@routes.HomeController.searchByTag(tag)">@tag</a></li>
+    }
+</ul>
+
+<div style="margin-top: 20px;">
+    <a href="@routes.HomeController.index">Back to Search</a>
+</div>
+}
