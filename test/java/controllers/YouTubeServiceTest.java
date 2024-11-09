@@ -52,7 +52,6 @@ public class YouTubeServiceTest {
     public void testSearchVideos() throws IOException {
         String query = "test query";
 
-        // Mocking the search results
         SearchListResponse searchListResponse = new SearchListResponse();
         SearchResult searchResult = new SearchResult();
         ResourceId resourceId = new ResourceId();
@@ -69,7 +68,6 @@ public class YouTubeServiceTest {
         when(searchList.setKey(anyString())).thenReturn(searchList);
         when(searchList.execute()).thenReturn(searchListResponse);
 
-        // Mocking getVideoDetails
         VideoResult videoResult = new VideoResult(
                 "Test Title",
                 "Test Description",
@@ -90,13 +88,41 @@ public class YouTubeServiceTest {
     }
 
     @Test
+    public void testSearchVideos_VideoDetailNull() throws IOException {
+        String query = "test query";
+
+        SearchListResponse searchListResponse = new SearchListResponse();
+        SearchResult searchResult = new SearchResult();
+        ResourceId resourceId = new ResourceId();
+        resourceId.setVideoId("videoId123");
+        searchResult.setId(resourceId);
+        searchResult.setSnippet(new SearchResultSnippet());
+        searchListResponse.setItems(Collections.singletonList(searchResult));
+
+        when(youtube.search()).thenReturn(youtubeSearch);
+        when(youtubeSearch.list("snippet")).thenReturn(searchList);
+        when(searchList.setQ(query)).thenReturn(searchList);
+        when(searchList.setMaxResults(anyLong())).thenReturn(searchList);
+        when(searchList.setType("video")).thenReturn(searchList);
+        when(searchList.setKey(anyString())).thenReturn(searchList);
+        when(searchList.execute()).thenReturn(searchListResponse);
+
+        YouTubeService spyService = spy(youTubeService);
+        doReturn(null).when(spyService).getVideoDetails("videoId123");
+
+        List<VideoResult> results = spyService.searchVideos(query);
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty()); // Expect an empty list since videoDetail is null
+    }
+
+    @Test
     public void testGetVideoDetails() throws IOException {
         String videoId = "videoId123";
 
         VideoListResponse videoListResponse = new VideoListResponse();
         Video video = new Video();
 
-        // Set up snippet
         VideoSnippet snippet = new VideoSnippet();
         snippet.setTitle("Test Title");
         snippet.setDescription("Test Description");
@@ -104,7 +130,6 @@ public class YouTubeServiceTest {
         snippet.setChannelTitle("Channel Title");
         snippet.setTags(Arrays.asList("tag1", "tag2"));
 
-        // Set up thumbnails
         Thumbnail thumbnail = new Thumbnail();
         thumbnail.setUrl("http://thumbnail.url");
         ThumbnailDetails thumbnailDetails = new ThumbnailDetails();
@@ -130,6 +155,48 @@ public class YouTubeServiceTest {
         assertEquals("http://thumbnail.url", result.getThumbnailUrl());
         assertEquals("Channel Title", result.getChannelTitle());
         assertEquals(Arrays.asList("tag1", "tag2"), result.getTags());
+    }
+
+    @Test
+    public void testGetVideoDetails_NullTags() throws IOException {
+        String videoId = "videoId123";
+
+        VideoListResponse videoListResponse = new VideoListResponse();
+        Video video = new Video();
+
+        VideoSnippet snippet = new VideoSnippet();
+        snippet.setTitle("Test Title");
+        snippet.setDescription("Test Description");
+        snippet.setChannelId("channelId123");
+        snippet.setChannelTitle("Channel Title");
+        snippet.setTags(null); // Simulate tags being null
+
+        Thumbnail thumbnail = new Thumbnail();
+        thumbnail.setUrl("http://thumbnail.url");
+        ThumbnailDetails thumbnailDetails = new ThumbnailDetails();
+        thumbnailDetails.setDefault(thumbnail);
+        snippet.setThumbnails(thumbnailDetails);
+
+        video.setSnippet(snippet);
+        videoListResponse.setItems(Collections.singletonList(video));
+
+        when(youtube.videos()).thenReturn(youtubeVideos);
+        when(youtubeVideos.list("snippet")).thenReturn(videosList);
+        when(videosList.setId(videoId)).thenReturn(videosList);
+        when(videosList.setKey(anyString())).thenReturn(videosList);
+        when(videosList.execute()).thenReturn(videoListResponse);
+
+        VideoResult result = youTubeService.getVideoDetails(videoId);
+
+        assertNotNull(result);
+        assertEquals("Test Title", result.getTitle());
+        assertEquals("Test Description", result.getDescription());
+        assertEquals(videoId, result.getVideoId());
+        assertEquals("channelId123", result.getChannelId());
+        assertEquals("http://thumbnail.url", result.getThumbnailUrl());
+        assertEquals("Channel Title", result.getChannelTitle());
+        assertNotNull(result.getTags());
+        assertTrue(result.getTags().isEmpty()); // Expect an empty list when tags are null
     }
 
     @Test
@@ -272,7 +339,6 @@ public class YouTubeServiceTest {
         when(searchList.setKey(anyString())).thenReturn(searchList);
         when(searchList.execute()).thenReturn(searchListResponse);
 
-        // Mock getVideoDetails for each video
         YouTubeService spyService = spy(youTubeService);
         for (int i = 0; i < limit; i++) {
             String videoId = "videoId" + i;
@@ -303,22 +369,15 @@ public class YouTubeServiceTest {
 
     @Test
     public void testConstructor_Default() {
-        // Testing the default constructor
         YouTubeService service = new YouTubeService();
         assertNotNull(service);
     }
-/*
+
     @Test(expected = RuntimeException.class)
     public void testConstructor_Exception() {
-        // Simulate an exception during YouTube client initialization
-        try {
-            when(GoogleNetHttpTransport.newTrustedTransport()).thenThrow(new Exception("Initialization failed"));
-        } catch (Exception e) {
-            System.out.println(e);
-            // Ignore exception in the test setup
+        try (MockedStatic<GoogleNetHttpTransport> mockedStatic = mockStatic(GoogleNetHttpTransport.class)) {
+            mockedStatic.when(GoogleNetHttpTransport::newTrustedTransport).thenThrow(new Exception("Initialization failed"));
+            new YouTubeService();
         }
-
-        new YouTubeService();
     }
-    */
 }
