@@ -7,8 +7,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Unit tests for the {@link VideoResult} class.
+ */
 public class VideoResultTest {
 
+    /**
+     * Tests the constructor and getters of the {@link VideoResult} class.
+     */
     @Test
     public void testConstructorAndGetters() {
         String title = "Test Title";
@@ -39,6 +45,9 @@ public class VideoResultTest {
         assertEquals(tags, videoResult.getTags());
     }
 
+    /**
+     * Tests the constructor of the {@link VideoResult} class when tags are null.
+     */
     @Test
     public void testConstructorWithNullTags() {
         VideoResult videoResult = new VideoResult(
@@ -55,6 +64,9 @@ public class VideoResultTest {
         assertTrue(videoResult.getTags().isEmpty());
     }
 
+    /**
+     * Tests the {@link VideoResult#getVideoUrl()} method.
+     */
     @Test
     public void testGetVideoUrl() {
         String videoId = "videoId123";
@@ -72,6 +84,9 @@ public class VideoResultTest {
         assertEquals(expectedUrl, videoResult.getVideoUrl());
     }
 
+    /**
+     * Tests the {@link VideoResult#getChannelUrl()} method.
+     */
     @Test
     public void testGetChannelUrl() {
         String channelId = "channelId123";
@@ -89,6 +104,9 @@ public class VideoResultTest {
         assertEquals(expectedUrl, videoResult.getChannelUrl());
     }
 
+    /**
+     * Tests the {@link VideoResult#getTags()} method when an empty list of tags is passed.
+     */
     @Test
     public void testGetTagsEmptyList() {
         VideoResult videoResult = new VideoResult(

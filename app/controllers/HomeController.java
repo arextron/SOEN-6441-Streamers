@@ -26,18 +26,35 @@ public class HomeController extends Controller {
 
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
+    /**
+     * Constructor for HomeController.
+     *
+     * @param youTubeService Service to interact with YouTube API.
+     * @param cache The cache API to store search history and results.
+     */
     @Inject
     public HomeController(YouTubeService youTubeService, SyncCacheApi cache) {
         this.youTubeService = youTubeService;
         this.cache = cache;
     }
 
-    // Render the homepage with the search box
+    /**
+     * Renders the homepage with a search box.
+     *
+     * @param request The HTTP request object.
+     * @return The rendered homepage.
+     */
     public Result index(Http.Request request) {
         return ok(index.render());
     }
 
-    // Handle search request and display video results with session-specific history
+    /**
+     * Handles the search request, displays video results and updates search history.
+     *
+     * @param query The search query entered by the user.
+     * @param request The HTTP request object.
+     * @return A CompletionStage that returns the rendered search results.
+     */
     public CompletionStage<Result> search(String query, Http.Request request) {
         if (query == null || query.isEmpty()) {
             return CompletableFuture.completedFuture(ok("Please provide a search query."));
@@ -95,8 +112,12 @@ public class HomeController extends Controller {
         });
     }
 
-
-    // Show video details, including tags
+    /**
+     * Displays video details, including tags.
+     *
+     * @param videoId The ID of the video.
+     * @return A CompletionStage that returns the rendered video details.
+     */
     public CompletionStage<Result> showVideoDetails(String videoId) {
         return CompletableFuture.supplyAsync(() -> {
             VideoResult video = youTubeService.getVideoDetails(videoId);
@@ -107,9 +128,12 @@ public class HomeController extends Controller {
         });
     }
 
-
-
-    // Search videos by tag
+    /**
+     * Searches for videos by a given tag.
+     *
+     * @param tag The tag to search by.
+     * @return A CompletionStage that returns the rendered search results by tag.
+     */
     public CompletionStage<Result> searchByTag(String tag) {
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
@@ -117,7 +141,12 @@ public class HomeController extends Controller {
         });
     }
 
-    // Generate word statistics for a query
+    /**
+     * Generates word statistics for a given search query.
+     *
+     * @param query The search query.
+     * @return A CompletionStage that returns the rendered word statistics.
+     */
     public CompletionStage<Result> wordStats(String query) {
         if (query == null || query.trim().isEmpty()) {
             return CompletableFuture.completedFuture(
@@ -157,7 +186,12 @@ public class HomeController extends Controller {
         });
     }
 
-    // Channel profile page with latest videos
+    /**
+     * Displays the channel profile page along with the latest videos.
+     *
+     * @param channelId The ID of the YouTube channel.
+     * @return A CompletionStage that returns the rendered channel profile page.
+     */
     public CompletionStage<Result> channelProfile(String channelId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -170,4 +204,5 @@ public class HomeController extends Controller {
             }
         });
     }
+
 }

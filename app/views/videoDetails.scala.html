@@ -3,27 +3,32 @@
 @import scala.jdk.CollectionConverters._
 
 @main("Video Details") {
-<div style="text-align: center; margin-bottom: 20px;">
-    <h2>@video.getTitle()</h2>
-</div>
+    <!-- Display the title of the video -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2>@video.getTitle()</h2>
+    </div>
 
-<div style="text-align: center; margin-bottom: 20px;">
-    <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 300px; height: auto;">
-</div>
+        <!-- Display the thumbnail of the video -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 300px; height: auto;">
+    </div>
 
-<div style="margin-bottom: 20px;">
-    <p><strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a></p>
-    <p><strong>Description:</strong> @video.getDescription()</p>
-</div>
+        <!-- Display channel information and video description -->
+    <div style="margin-bottom: 20px;">
+        <p><strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a></p>
+        <p><strong>Description:</strong> @video.getDescription()</p>
+    </div>
 
-<h3>Tags:</h3>
-<ul>
+        <!-- Display video tags with links to search by tag -->
+    <h3>Tags:</h3>
+    <ul>
     @for(tag <- video.getTags().asScala) {
-    <li><a href="@routes.HomeController.searchByTag(tag)">@tag</a></li>
+        <li><a href="@routes.HomeController.searchByTag(tag)">@tag</a></li>
     }
-</ul>
+    </ul>
 
-<div style="margin-top: 20px;">
-    <a href="@routes.HomeController.index()">Back to Search</a>
-</div>
+        <!-- Link to return to the main search page -->
+    <div style="margin-top: 20px;">
+        <a href="@routes.HomeController.index()">Back to Search</a>
+    </div>
 }

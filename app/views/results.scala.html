@@ -3,41 +3,55 @@
 @import scala.jdk.CollectionConverters._
 
 @main("Search Results") {
-<div style="text-align: center; margin-bottom: 20px;">
-    <h2>Welcome to YT Lytics</h2>
-</div>
 
-<form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
-    <input type="text" name="query" placeholder="Enter search terms" required>
-    <button type="submit" style="padding: 5px 10px;">Go!</button>
-</form>
+    <!-- Header section for the page -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2>Welcome to YT Lytics</h2>
+    </div>
 
-@for(entry <- searchHistory.asScala) {
-<div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-    <h3>Search terms: @entry.getKey</h3>
-    <p>Displaying results for "@entry.getKey"</p>
-    <a href="@routes.HomeController.wordStats(entry.getKey)">View Word Statistics</a>
+        <!-- Search form allowing the user to input query terms -->
+    <form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
+        <input type="text" name="query" placeholder="Enter search terms" required>
+        <button type="submit" style="padding: 5px 10px;">Go!</button>
+    </form>
 
-    <ol>
-        @for(video <- entry.getValue.asScala) {
-        <li>
-            <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
-            <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">Channel Profile</a><br>
-            <p><strong>Description:</strong> @video.getDescription()</p>
-            <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+        <!-- Loop through searchHistory to display past search results -->
+    @for(entry <- searchHistory.asScala) {
+        <div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
 
-            <!-- Tags Section -->
-            @if(video.getTags() != null && video.getTags().nonEmpty) {
-            <p><strong>Tags:</strong>
-                @for(tag <- video.getTags().asScala) {
-                <a href="@routes.HomeController.searchByTag(tag)">@tag</a>
-                @if(tag != video.getTags().asScala.last) { , }
-                }
-            </p>
+                <!-- Display search term and link to word statistics page -->
+            <h3>Search terms: @entry.getKey</h3>
+            <p>Displaying results for "@entry.getKey"</p>
+            <a href="@routes.HomeController.wordStats(entry.getKey)">View Word Statistics</a>
+
+                <!-- List of video results related to the search term -->
+            <ol>
+            @for(video <- entry.getValue.asScala) {
+                <li>
+                        <!-- Display video title with a clickable link to the video -->
+                    <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+
+                        <!-- Display clickable link to the channel profile -->
+                    <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">Channel Profile</a><br>
+
+                        <!-- Display video description -->
+                    <p><strong>Description:</strong> @video.getDescription()</p>
+
+                        <!-- Display video thumbnail -->
+                    <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+
+                        <!-- Display tags for the video if available -->
+                    @if(video.getTags() != null && video.getTags().nonEmpty) {
+                        <p><strong>Tags:</strong>
+                            @for(tag <- video.getTags().asScala) {
+                                <a href="@routes.HomeController.searchByTag(tag)">@tag</a>
+                                @if(tag != video.getTags().asScala.last) { , }
+                            }
+                        </p>
+                    }
+                </li>
             }
-        </li>
-        }
-    </ol>
-</div>
-}
+            </ol>
+        </div>
+    }
 }
