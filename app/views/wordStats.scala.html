@@ -1,21 +1,25 @@
 @(query: String, wordFrequency: Map[String, Long])
 
-    @main("Word Statistics for " + query) {
-        <h2>Word Frequency Statistics for "@query"</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Word</th>
-                    <th>Frequency</th>
-                </tr>
-            </thead>
-            <tbody>
+@main("Word Statistics for " + query) {
+    <!-- Display the heading for the word statistics page -->
+    <h2>Word Frequency Statistics for "@query"</h2>
+
+        <!-- Create a table to display the word frequency statistics -->
+    <table>
+        <thead>
+            <tr>
+                <th>Word</th> <!-- Column for words -->
+                <th>Frequency</th> <!-- Column for word frequency -->
+            </tr>
+        </thead>
+        <tbody>
+                <!-- Loop through the word frequency map and display each word and its count -->
             @for((word, count) <- wordFrequency) {
                 <tr>
-                    <td>@word</td>
-                    <td>@count</td>
+                    <td>@word</td> <!-- Display the word -->
+                    <td>@count</td> <!-- Display the frequency of the word -->
                 </tr>
             }
-            </tbody>
-        </table>
-    }
+        </tbody>
+    </table>
+}

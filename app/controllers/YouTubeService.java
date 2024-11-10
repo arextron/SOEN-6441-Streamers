@@ -15,11 +15,19 @@ public class YouTubeService {
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
 
-    // Default constructor initializing YouTube instance with API key
+    /**
+     * Constructor that initializes the YouTube instance with the provided YouTube object.
+     *
+     * @param youtube The YouTube instance.
+     */
     public YouTubeService(YouTube youtube) {
         this.youtube = youtube;
     }
 
+    /**
+     * Default constructor that initializes the YouTube client using API key and sets application name.
+     * This constructor throws a runtime exception if YouTube client initialization fails.
+     */
     public YouTubeService() {
         try {
             youtube = new YouTube.Builder(
@@ -32,7 +40,13 @@ public class YouTubeService {
         }
     }
 
-    // Fetch channel profile information
+    /**
+     * Fetches the profile information of a channel by its ID.
+     *
+     * @param channelId The ID of the YouTube channel.
+     * @return The Channel object containing channel profile details.
+     * @throws IOException If an I/O error occurs while fetching channel details.
+     */
     public Channel getChannelProfile(String channelId) throws IOException {
         YouTube.Channels.List request = youtube.channels().list("snippet,statistics");
         request.setId(channelId);
@@ -45,7 +59,14 @@ public class YouTubeService {
         return response.getItems().get(0);
     }
 
-    // Fetch latest videos for a channel
+    /**
+     * Fetches the latest videos for a given channel by its ID.
+     *
+     * @param channelId The ID of the YouTube channel.
+     * @param limit     The maximum number of videos to return.
+     * @return A list of VideoResult objects representing the latest videos.
+     * @throws IOException If an I/O error occurs while fetching videos.
+     */
     public List<VideoResult> getLatestVideosByChannel(String channelId, int limit) throws IOException {
         YouTube.Search.List request = youtube.search().list("snippet");
         request.setChannelId(channelId);
@@ -63,7 +84,12 @@ public class YouTubeService {
                 .collect(Collectors.toList());
     }
 
-    // Search for videos based on a query
+    /**
+     * Searches for videos based on a query string and returns a list of video details.
+     *
+     * @param query The search query string.
+     * @return A list of VideoResult objects for the videos found.
+     */
     public List<VideoResult> searchVideos(String query) {
         List<VideoResult> videoResults = new ArrayList<>();
         try {
@@ -89,7 +115,12 @@ public class YouTubeService {
         return videoResults;
     }
 
-    // Get video details including tags
+    /**
+     * Fetches detailed information about a video by its ID, including tags.
+     *
+     * @param videoId The ID of the YouTube video.
+     * @return A VideoResult object containing the detailed video information, or null if not found.
+     */
     public VideoResult getVideoDetails(String videoId) {
         try {
             YouTube.Videos.List request = youtube.videos().list("snippet");
@@ -116,7 +147,12 @@ public class YouTubeService {
         }
     }
 
-    // Search videos by tag
+    /**
+     * Searches for videos based on a tag and returns a list of videos related to that tag.
+     *
+     * @param tag The tag to search for.
+     * @return A list of VideoResult objects representing the videos found for the tag.
+     */
     public List<VideoResult> searchVideosByTag(String tag) {
         List<VideoResult> videoResults = new ArrayList<>();
         try {
