@@ -6,6 +6,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 import play.cache.SyncCacheApi;
 import play.mvc.Http;
@@ -43,6 +44,7 @@ public class HomeControllerTest {
 
     @Before
     public void setUp() {
+        MockitoAnnotations.initMocks(this);
         // Initialize the controller with mocked dependencies
         homeController = new HomeController(youTubeService, cache);
     }
@@ -279,6 +281,7 @@ public class HomeControllerTest {
         String content = contentAsString(result);
         assertEquals("An error occurred while processing your request.", content);
     }
+
     @Test
     public void testChannelProfile() throws IOException {
         String channelId = "channelId123";
@@ -359,4 +362,162 @@ public class HomeControllerTest {
         assertEquals("Video not found", content);
     }
 
+
+    @Test
+    public void testSearch_CacheMiss() throws Exception {
+        Http.Request request = fakeRequest().build();
+        when(cache.getOptional(anyString())).thenReturn(Optional.empty());
+        when(youTubeService.searchVideos(anyString())).thenReturn(Collections.emptyList());
+
+        CompletionStage<Result> resultStage = homeController.search("new query", request);
+        Result result = resultStage.toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        verify(cache).set(anyString(), any());
+        assertTrue(contentAsString(result).contains("Displaying results for \"new query\""));
+    }
+
+    @Test
+    public void testSearch_SessionIdCreation() {
+        Http.Request request = fakeRequest().session("sessionId", "").build();
+        when(youTubeService.searchVideos(anyString())).thenReturn(Collections.emptyList());
+
+        CompletionStage<Result> resultStage = homeController.search("test query", request);
+        Result result = resultStage.toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        String sessionId = result.session().get("sessionId").orElse(null);
+        assertNotNull(sessionId);
+    }
+
+    @Test
+    public void testSearch_EmptyDescriptionFilter() throws Exception {
+        Http.Request request = fakeRequest().build();
+        VideoResult videoWithEmptyDescription = new VideoResult(
+                "Title with Empty Description", "", "videoId123", "channelId123", "http://thumbnail.url", "Channel Title", Arrays.asList("tag")
+        );
+        when(youTubeService.searchVideos(anyString())).thenReturn(Arrays.asList(videoWithEmptyDescription));
+
+        CompletionStage<Result> resultStage = homeController.search("test query", request);
+        Result result = resultStage.toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        assertFalse(contentAsString(result).contains("Title with Empty Description"));
+    }
+
+    @Test
+    public void testChannelProfile_VideosIOException() throws Exception {
+        String channelId = "channelId123";
+        Channel channel = new Channel();
+        ChannelSnippet snippet = new ChannelSnippet();
+        snippet.setTitle("Test Channel");
+        channel.setSnippet(snippet);
+
+        when(youTubeService.getChannelProfile(channelId)).thenReturn(channel);
+        when(youTubeService.getLatestVideosByChannel(channelId, 10)).thenThrow(new IOException("Video fetch error"));
+
+        CompletionStage<Result> resultStage = homeController.channelProfile(channelId);
+        Result result = resultStage.toCompletableFuture().join();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        assertTrue(contentAsString(result).contains("Unable to fetch channel information"));
+    }
+
+    @Test
+    public void testWordStats_LambdaExpression() {
+        String query = "test query";
+
+        // Create mock video results with sample descriptions
+        VideoResult video1 = new VideoResult(
+                "Test Title 1",
+                "hello world",
+                "videoId1",
+                "channelId1",
+                "http://thumbnail1.url",
+                "Channel Title 1",
+                Arrays.asList("tag1")
+        );
+
+        VideoResult video2 = new VideoResult(
+                "Test Title 2",
+                "hello again",
+                "videoId2",
+                "channelId2",
+                "http://thumbnail2.url",
+                "Channel Title 2",
+                Arrays.asList("tag2")
+        );
+
+        // List of video results
+        List<VideoResult> videoResults = Arrays.asList(video1, video2);
+
+        // Mock YouTubeService to return the video results
+        when(youTubeService.searchVideos(query)).thenReturn(videoResults);
+
+        // Call the wordStats method and get the result
+        CompletionStage<Result> resultStage = homeController.wordStats(query);
+        Result result = resultStage.toCompletableFuture().join();
+
+        // Assert that the status is OK
+        assertEquals(OK, result.status());
+
+        // Get the content of the result
+        String content = contentAsString(result);
+
+        // Assert that the words and their frequencies appear in the content
+        assertTrue(content.contains("hello"));
+        assertTrue(content.contains("2")); // "hello" appears twice
+        assertTrue(content.contains("world"));
+        assertTrue(content.contains("1")); // "world" appears once
+        assertTrue(content.contains("again"));
+        assertTrue(content.contains("1")); // "again" appears once
+    }
+
+    @Test
+    public void testWordStats_LambdaExpression_Extended() {
+        String query = "test query extended";
+
+        // Mock videos with different cases, punctuations, and some empty descriptions
+        VideoResult video1 = new VideoResult(
+                "Title 1", "Hello world!", "videoId1", "channelId1", "http://thumbnail1.url", "Channel Title 1", Arrays.asList("tag1")
+        );
+        VideoResult video2 = new VideoResult(
+                "Title 2", "hello again, world", "videoId2", "channelId2", "http://thumbnail2.url", "Channel Title 2", Arrays.asList("tag2")
+        );
+        VideoResult video3 = new VideoResult(
+                "Title 3", "", "videoId3", "channelId3", "http://thumbnail3.url", "Channel Title 3", Arrays.asList("tag3")
+        );
+
+        List<VideoResult> videoResults = Arrays.asList(video1, video2, video3);
+
+        // Mock YouTubeService to return the video results
+        when(youTubeService.searchVideos(query)).thenReturn(videoResults);
+
+        // Call the wordStats method and get the result
+        CompletionStage<Result> resultStage = homeController.wordStats(query);
+        Result result = resultStage.toCompletableFuture().join();
+
+        // Assert that the status is OK
+        assertEquals(OK, result.status());
+
+        // Get the content of the result
+        String content = contentAsString(result);
+
+        // Validate that words are counted case-insensitively, with punctuation handled
+        assertTrue(content.contains("hello"));
+        assertTrue(content.contains("2")); // "hello" appears twice across descriptions
+        assertTrue(content.contains("world"));
+        assertTrue(content.contains("2")); // "world" appears twice, despite punctuation
+        assertTrue(content.contains("again"));
+        assertTrue(content.contains("1")); // "again" appears once
+
+        // Check that empty descriptions are ignored in word count
+        assertFalse(content.contains("Title 3"));
+    }
 }
+
+
+
+
+
+
