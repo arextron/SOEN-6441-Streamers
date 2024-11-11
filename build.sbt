@@ -38,4 +38,6 @@ lazy val root = (project in file("."))
       "**/*$*.class"
       // Exclude synthetic lambda classes
     )
+
+
   )
