@@ -1,21 +1,20 @@
 //We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
-
 package controllers;
-
+import models.VideoResult;
+import models.YouTubeService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
 import play.cache.SyncCacheApi;
 import play.mvc.Http;
 import play.mvc.Result;
-import play.test.Helpers;
+
 import java.math.BigInteger;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -29,10 +28,12 @@ import static play.test.Helpers.*;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.ChannelSnippet;
 import com.google.api.services.youtube.model.ChannelStatistics;
+
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoSnippet;
 import com.google.api.services.youtube.model.Thumbnail;
 import com.google.api.services.youtube.model.ThumbnailDetails;
+
 @RunWith(MockitoJUnitRunner.class)
 
 /**
