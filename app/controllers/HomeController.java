@@ -1,5 +1,7 @@
 package controllers;
 
+import models.VideoResult;
+import models.YouTubeService;
 import play.mvc.*;
 import views.html.index;
 import views.html.results;
@@ -133,7 +135,13 @@ public class HomeController extends Controller {
                     return ok("No word frequency data available for \"" + query + "\".");
                 }
 
-                Map<String, Long> wordFrequency = videos.stream()
+                // Process only the first 50 videos (or fewer if not enough results are available)
+                List<VideoResult> latestVideos = videos.stream()
+                        .filter(video -> video.getDescription() != null && !video.getDescription().isEmpty())
+                        .limit(50)
+                        .collect(Collectors.toList());
+
+                Map<String, Long> wordFrequency = latestVideos.stream()
                         .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+")))
                         .map(String::toLowerCase)
                         .filter(word -> !word.isEmpty())
