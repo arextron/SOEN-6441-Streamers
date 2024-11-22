@@ -1,11 +1,8 @@
-<<<<<<< HEAD:app/models/YouTubeService.java
+
 package models;
-=======
 //We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
-package controllers;
->>>>>>> 16ad0a1faa7e37df17bc9daf6e2cadd656aa04ad:app/controllers/YouTubeService.java
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
