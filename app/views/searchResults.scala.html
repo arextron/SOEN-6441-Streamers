@@ -3,34 +3,42 @@
 @import scala.jdk.CollectionConverters._
 
 @main("Search Results for Tag: " + tag) {
-<div style="text-align: center; margin-bottom: 20px;">
-  <h2>Search Results for Tag: "@tag"</h2>
-</div>
+  <!-- Display the tag being searched -->
+  <div style="text-align: center; margin-bottom: 20px;">
+    <h2>Search Results for Tag: "@tag"</h2>
+  </div>
 
-@if(videos.isEmpty) {
-<p>No videos found for the tag "@tag".</p>
-} else {
-<ul>
-  @for(video <- videos.asScala) {
-  <li style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-    <div style="margin-bottom: 10px;">
-      <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <p><strong>Description:</strong> @video.getDescription()</p>
-    </div>
-    <div style="margin-bottom: 10px;">
-      <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
-    </div>
-  </li>
+    <!-- Check if no videos were found -->
+  @if(videos.isEmpty) {
+    <p>No videos found for the tag "@tag".</p>
+  } else {
+      <!-- Display the list of videos found -->
+    <ul>
+    @for(video <- videos.asScala) {
+      <li style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+        <div style="margin-bottom: 10px;">
+            <!-- Display video title with a clickable link to the video -->
+          <strong>Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <!-- Display the channel's title with a clickable link to the channel profile -->
+          <strong>Channel:</strong> <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <!-- Display video description -->
+          <p><strong>Description:</strong> @video.getDescription()</p>
+        </div>
+        <div style="margin-bottom: 10px;">
+            <!-- Display video thumbnail -->
+          <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+        </div>
+      </li>
+    }
+    </ul>
   }
-</ul>
-}
 
-<div style="margin-top: 20px;">
-  <a href="@routes.HomeController.index()">Back to Search</a>
-</div>
+    <!-- Link back to the home page -->
+  <div style="margin-top: 20px;">
+    <a href="@routes.HomeController.index()">Back to Search</a>
+  </div>
 }

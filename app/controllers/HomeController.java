@@ -1,3 +1,6 @@
+//We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
+//Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
+// 40278847, 40310953, 40272435
 package controllers;
 
 import models.VideoResult;
@@ -18,6 +21,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
@@ -28,18 +32,36 @@ public class HomeController extends Controller {
 
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
+    /**
+     * Constructor for HomeController.
+     *
+     * @param youTubeService Service to interact with YouTube API.
+     * @param cache The cache API to store search history and results.
+     */
+
     @Inject
     public HomeController(YouTubeService youTubeService, SyncCacheApi cache) {
         this.youTubeService = youTubeService;
         this.cache = cache;
     }
 
-    // Render the homepage with the search box
+    /**
+     * Renders the homepage with a search box.
+     *
+     * @param request The HTTP request object.
+     * @return The rendered homepage.
+     */
     public Result index(Http.Request request) {
         return ok(index.render());
     }
 
-    // Handle search request and display video results with session-specific history
+    /**
+     * Handles the search request, displays video results and updates search history.
+     *
+     * @param query The search query entered by the user.
+     * @param request The HTTP request object.
+     * @return A CompletionStage that returns the rendered search results.
+     */
     public CompletionStage<Result> search(String query, Http.Request request) {
         if (query == null || query.isEmpty()) {
             return CompletableFuture.completedFuture(ok("Please provide a search query."));
@@ -97,8 +119,12 @@ public class HomeController extends Controller {
         });
     }
 
-
-    // Show video details, including tags
+    /**
+     * Displays video details, including tags.
+     *
+     * @param videoId The ID of the video.
+     * @return A CompletionStage that returns the rendered video details.
+     */
     public CompletionStage<Result> showVideoDetails(String videoId) {
         return CompletableFuture.supplyAsync(() -> {
             VideoResult video = youTubeService.getVideoDetails(videoId);
@@ -108,18 +134,39 @@ public class HomeController extends Controller {
             return ok(videoDetails.render(video));
         });
     }
-
-
-
-    // Search videos by tag
-    public CompletionStage<Result> searchByTag(String tag) {
+    /**
+     * View tags for a search query and render a page with videos and their tags.
+     *
+     * @param query The search query.
+     * @return A CompletionStage rendering videos related to the query.
+     */
+    public CompletionStage<Result> viewTags(String query) {
         return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
-            return ok(searchResults.render(tag, videos));
+            List<VideoResult> videos = youTubeService.searchVideos(query);
+            return ok(views.html.tagResults.render(query, videos));
         });
     }
 
-    // Generate word statistics for a query
+    /**
+     * Fetch videos related to a specific tag and render them.
+     *
+     * @param tag The tag to search for.
+     * @return A CompletionStage rendering videos associated with the tag.
+     */
+    public CompletionStage<Result> searchByTag(String tag) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
+            return ok(views.html.tagResults.render(tag, videos));
+        });
+    }
+
+
+    /**
+     * Generates word statistics for a given search query.
+     *
+     * @param query The search query.
+     * @return A CompletionStage that returns the rendered word statistics.
+     */
     public CompletionStage<Result> wordStats(String query) {
         if (query == null || query.trim().isEmpty()) {
             return CompletableFuture.completedFuture(
@@ -165,7 +212,12 @@ public class HomeController extends Controller {
         });
     }
 
-    // Channel profile page with latest videos
+    /**
+     * Displays the channel profile page along with the latest videos.
+     *
+     * @param channelId The ID of the YouTube channel.
+     * @return A CompletionStage that returns the rendered channel profile page.
+     */
     public CompletionStage<Result> channelProfile(String channelId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -178,4 +230,5 @@ public class HomeController extends Controller {
             }
         });
     }
+
 }
