@@ -150,34 +150,24 @@ public class YouTubeService {
         }
     }
 
-    /**
-     * Searches for videos based on a tag and returns a list of videos related to that tag.
-     *
-     * @param tag The tag to search for.
-     * @return A list of VideoResult objects representing the videos found for the tag.
-     */
     public List<VideoResult> searchVideosByTag(String tag) {
         List<VideoResult> videoResults = new ArrayList<>();
         try {
             YouTube.Search.List search = youtube.search().list("snippet");
-            search.setQ(tag); // Use the tag as the search query
+            search.setQ(tag);
             search.setType("video");
-            search.setMaxResults(MAX_RESULTS);
+            search.setMaxResults(10L); // Fetch up to 10 results
             search.setKey(API_KEY);
 
             SearchListResponse response = search.execute();
             List<SearchResult> results = response.getItems();
 
             for (SearchResult result : results) {
-                String title = result.getSnippet().getTitle();
-                String description = result.getSnippet().getDescription();
                 String videoId = result.getId().getVideoId();
-                String channelId = result.getSnippet().getChannelId();
-                String thumbnailUrl = result.getSnippet().getThumbnails().getDefault().getUrl();
-                String channelTitle = result.getSnippet().getChannelTitle();
-                List<String> tags = new ArrayList<>(); // Tags can be empty in search results
-
-                videoResults.add(new VideoResult(title, description, videoId, channelId, thumbnailUrl, channelTitle, tags));
+                VideoResult videoDetail = getVideoDetails(videoId);
+                if (videoDetail != null) {
+                    videoResults.add(videoDetail);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();

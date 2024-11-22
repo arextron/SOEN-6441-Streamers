@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
@@ -131,19 +132,32 @@ public class HomeController extends Controller {
             return ok(videoDetails.render(video));
         });
     }
+    /**
+     * View tags for a search query and render a page with videos and their tags.
+     *
+     * @param query The search query.
+     * @return A CompletionStage rendering videos related to the query.
+     */
+    public CompletionStage<Result> viewTags(String query) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<VideoResult> videos = youTubeService.searchVideos(query);
+            return ok(views.html.tagResults.render(query, videos));
+        });
+    }
 
     /**
-     * Searches for videos by a given tag.
+     * Fetch videos related to a specific tag and render them.
      *
-     * @param tag The tag to search by.
-     * @return A CompletionStage that returns the rendered search results by tag.
+     * @param tag The tag to search for.
+     * @return A CompletionStage rendering videos associated with the tag.
      */
     public CompletionStage<Result> searchByTag(String tag) {
         return CompletableFuture.supplyAsync(() -> {
             List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
-            return ok(searchResults.render(tag, videos));
+            return ok(views.html.tagResults.render(tag, videos));
         });
     }
+
 
     /**
      * Generates word statistics for a given search query.

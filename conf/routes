@@ -8,3 +8,6 @@ GET     /wordStats                controllers.HomeController.wordStats(query: St
 GET     /channelProfile           controllers.HomeController.channelProfile(channelId: String)
 GET     /video/tags/:videoId      controllers.HomeController.showVideoDetails(videoId: String)
 GET     /search/tag/:tag          controllers.HomeController.searchByTag(tag: String)
+GET     /viewTags/:query          controllers.HomeController.viewTags(query: String)
+
+
