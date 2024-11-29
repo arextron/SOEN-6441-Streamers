@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * Service class for interacting with the YouTube API.
  */
 public class YouTubeService {
-    private static final String API_KEY = "AIzaSyCCrJxEZF3lEjFBOgA3alH26oj2GlyqujY"; // Replace with your actual API key
+    private static final String API_KEY = "AIzaSyCZaFSQMkl2nuD8tuCo43hPvoMua2e3VEY"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
@@ -93,27 +93,28 @@ public class YouTubeService {
             request.setKey(API_KEY);
 
             VideoListResponse response = request.execute();
-            if (response.getItems().isEmpty()) {
-                return null;
-            }
 
-            Video video = response.getItems().get(0);
-            String title = video.getSnippet().getTitle();
-            String description = video.getSnippet().getDescription();
-            String channelId = video.getSnippet().getChannelId();
-            String channelTitle = video.getSnippet().getChannelTitle();
-            String thumbnailUrl = video.getSnippet().getThumbnails().getDefault().getUrl();
-            List<String> tags = video.getSnippet().getTags() != null ? video.getSnippet().getTags() : new ArrayList<>();
-
-            return new VideoResult(title, description, videoId, channelId, thumbnailUrl, channelTitle, tags);
+            // Process the video details reactively
+            return response.getItems().stream()
+                    .findFirst()
+                    .map(video -> new VideoResult(
+                            video.getSnippet().getTitle(),
+                            video.getSnippet().getDescription(),
+                            videoId,
+                            video.getSnippet().getChannelId(),
+                            video.getSnippet().getThumbnails().getDefault().getUrl(),
+                            video.getSnippet().getChannelTitle(),
+                            video.getSnippet().getTags() != null ? video.getSnippet().getTags() : new ArrayList<>()
+                    ))
+                    .orElse(null); // Return null if no video is found
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return null; // Handle exception
         }
     }
 
+
     public List<VideoResult> searchVideosByTag(String tag) {
-        List<VideoResult> videoResults = new ArrayList<>();
         try {
             YouTube.Search.List search = youtube.search().list("snippet");
             search.setQ(tag);
@@ -124,16 +125,14 @@ public class YouTubeService {
             SearchListResponse response = search.execute();
             List<SearchResult> results = response.getItems();
 
-            for (SearchResult result : results) {
-                String videoId = result.getId().getVideoId();
-                VideoResult videoDetail = getVideoDetails(videoId);
-                if (videoDetail != null) {
-                    videoResults.add(videoDetail);
-                }
-            }
+            // Stream through search results and map to VideoResult
+            return results.stream()
+                    .map(result -> getVideoDetails(result.getId().getVideoId()))
+                    .filter(videoResult -> videoResult != null) // Filter out null values
+                    .collect(Collectors.toList());
         } catch (IOException e) {
             e.printStackTrace();
+            return new ArrayList<>(); // Return an empty list on error
         }
-        return videoResults;
     }
 }
