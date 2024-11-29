@@ -1,44 +1,213 @@
-@()
-@main("TubeLytics") {
+@(title: String, request: play.mvc.Http.Request)
 
-    <!-- Main container to center content -->
+@import play.api.mvc.RequestHeader
+
+@{
+    implicit val reqHeader: RequestHeader = request.asScala()
+}
+
+@main("YT Lytics") {
+
     <div class="center-container">
-            <!-- Heading for the page -->
-        <h1>Welcome to TubeLytics</h1>
+        <h1 class="title">Welcome to YT Lytics</h1>
 
-            <!-- Search form to submit queries -->
-        <form action="@routes.HomeController.search()" method="get">
-                <!-- Input field for entering search keywords -->
-            <input type="text" name="query" placeholder="Enter search keywords" required>
-
-                <!-- Submit button for the search form -->
-            <button type="submit">Search</button>
+            <!-- Search Form -->
+        <form id="searchForm" class="search-form">
+            <input type="text" id="searchQuery" name="query" placeholder="Enter search terms" required class="search-input">
+            <button type="submit" class="search-btn">Go!</button>
         </form>
+
+            <!-- Results Section -->
+        <div id="results" class="results-container"></div>
     </div>
 
+    <script type="text/javascript">
+            let ws;
+            const resultData = {}; // Object to keep track of results and indices for each search term
+
+            document.getElementById('searchForm').onsubmit = function(event) {
+                event.preventDefault();
+                const query = document.getElementById('searchQuery').value;
+
+                // Initialize search term data if not already present
+                if (!resultData[query]) {
+                    resultData[query] = { index: 1, videos: [] };
+                    createSearchTermSection(query); // Create a new section for this search term
+                }
+
+                if (ws) {
+                    ws.close(); // Close any existing WebSocket connections
+                }
+                startWebSocket(query);
+            };
+
+            function startWebSocket(query) {
+                const wsUrl = "@routes.HomeController.searchWebSocket().webSocketURL(request)";
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    ws.send(query); // Send search query to server
+                };
+
+                ws.onmessage = function(event) {
+                    const videos = JSON.parse(event.data);
+                    if (Array.isArray(videos)) {
+                        updateVideoList(query, videos); // Update results dynamically
+                    }
+                };
+
+                ws.onclose = function() {
+                    console.log("WebSocket connection closed");
+                };
+            }
+
+            function createSearchTermSection(query) {
+                const resultsDiv = document.getElementById('results');
+                const sectionDiv = document.createElement('div');
+                sectionDiv.id = `section-${query}`;
+                sectionDiv.className = 'search-section';
+
+                sectionDiv.innerHTML = `
+                <h2 class="search-title">Search terms: ${query} (Results: <span id="count-${query}">0</span>)</h2>
+                <div class="video-list" id="videos-${query}"></div>
+            `;
+
+                resultsDiv.prepend(sectionDiv);
+            }
+            function updateVideoList(query, videos) {
+                const videoListDiv = document.getElementById(`videos-${query}`);
+                const countSpan = document.getElementById(`count-${query}`);
+                const searchData = resultData[query];
+
+                videos.forEach(function (video) {
+                    // Check if the video is already in the list to prevent duplicates
+                    if (!searchData.videos.includes(video.videoId)) {
+                        const videoElement = document.createElement('div');
+                        videoElement.id = video.videoId; // Use videoId to prevent duplicates
+                        videoElement.className = 'video-item';
+
+                        // Add the video details
+                        videoElement.innerHTML = `
+                <div class="video-thumbnail">
+                    <img src="${video.thumbnailUrl}" alt="Thumbnail">
+                </div>
+                <div class="video-details">
+                    <h3><span class="video-index"></span>. <a href="${video.videoUrl}" target="_blank">${video.title}</a></h3>
+                    <p><strong>Description:</strong> ${video.description}</p>
+                    <p><strong>Channel:</strong> <a href="${video.channelUrl}" target="_blank">${video.channelTitle}</a></p>
+                    <p><a href="#" class="tags-link">Tags</a></p>
+                </div>
+            `;
+
+                        // Append the new video to the bottom of the video list
+                        videoListDiv.appendChild(videoElement);
+                        searchData.videos.push(video.videoId); // Track the added video
+                    }
+                });
+
+                // Update indices for all videos in ascending order
+                let currentIndex = 1;
+                Array.from(videoListDiv.children).forEach((videoItem) => {
+                    const indexSpan = videoItem.querySelector('.video-index');
+                    indexSpan.textContent = currentIndex++;
+                });
+
+                // Update the result count for this search term
+                countSpan.textContent = searchData.videos.length;
+            }
+
+    </script>
+
     <style>
-            /* Styling to center the content vertically and horizontally */
+            /* General Container */
             .center-container {
+                text-align: center;
+                margin-top: 50px;
+                font-family: Arial, sans-serif;
+            }
+
+            .title {
+                font-size: 28px;
+                margin-bottom: 20px;
+                font-weight: bold;
+            }
+
+            /* Search Form Styling */
+            .search-form {
+                margin-bottom: 30px;
+            }
+
+            .search-input {
+                width: 60%;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            .search-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                margin-left: 10px;
+            }
+
+            /* Results Section */
+            .results-container {
+                margin-top: 20px;
+                text-align: left;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
-                justify-content: center;
-                height: 100vh; /* Ensures the content is centered in the full viewport height */
-                text-align: center;
             }
 
-            /* Styling for the text input field */
-            input[type="text"] {
-                padding: 8px;
-                margin-right: 5px;
-                font-size: 16px;
+            .search-section {
+                width: 80%;
+                margin-bottom: 30px;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                background-color: #f9f9f9;
             }
 
-            /* Styling for the search button */
-            button {
-                padding: 8px 16px;
-                font-size: 16px;
+            .search-title {
+                font-size: 20px;
+                margin-bottom: 15px;
+                font-weight: bold;
+            }
+
+            .video-list {
+                margin-top: 10px;
+            }
+
+            .video-item {
+                display: flex;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #ddd;
+                padding-bottom: 10px;
+            }
+
+            .video-thumbnail img {
+                width: 150px;
+                height: auto;
+                margin-right: 20px;
+                border-radius: 4px;
+            }
+
+            .video-details {
+                flex-grow: 1;
+            }
+
+            .video-details h3 {
+                margin: 0 0 10px;
+            }
+
+            .video-details p {
+                margin: 5px 0;
+                line-height: 1.5;
+            }
+
+            .tags-link {
+                color: #007bff;
+                text-decoration: underline;
+                font-weight: bold;
             }
     </style>
-
 }

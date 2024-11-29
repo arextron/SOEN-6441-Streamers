@@ -1,56 +1,123 @@
-@(searchHistory: LinkedList[java.util.Map.Entry[String, java.util.List[VideoResult]]])
+@(searchHistory: LinkedList[Map.Entry[String, List[VideoResult]]], request: play.mvc.Http.Request)
 
 @import scala.jdk.CollectionConverters._
+@import java.util.LinkedList
+@import java.util.Map
+@import java.util.List
+@import models.VideoResult
+@import play.api.mvc.RequestHeader
 
-@main("Search Results") {
-
-<!-- Header section for the page -->
-<div style="text-align: center; margin-bottom: 20px;">
-    <h2>Welcome to YT Lytics</h2>
-</div>
-
-<!-- Search form allowing the user to input query terms -->
-<form action="@routes.HomeController.search()" method="get" style="text-align: center; margin-bottom: 20px;">
-    <input type="text" name="query" placeholder="Enter search terms" required>
-    <button type="submit" style="padding: 5px 10px;">Go!</button>
-</form>
-
-<!-- Loop through searchHistory to display past search results -->
-@for(entry <- searchHistory.asScala) {
-<div style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
-
-    <!-- Display search term and link to word statistics page -->
-    <h3>Search terms: @entry.getKey</h3>
-    <p>Displaying results for "@entry.getKey"</p>
-    <a href="@routes.HomeController.wordStats(entry.getKey)">View Word Statistics</a>
-
-    <!-- List of video results related to the search term -->
-    <ol>
-        @for(video <- entry.getValue.asScala) {
-        <li>
-            <!-- Display video title with a clickable link to the video -->
-            <strong>Title:</strong>
-            <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
-
-            <!-- Display clickable link to the channel profile -->
-            <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank">
-                Channel Profile
-            </a><br>
-
-            <!-- Display video description -->
-            <p><strong>Description:</strong> @video.getDescription()</p>
-
-            <!-- Display video thumbnail -->
-            <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
-
-            <!-- Tags Hyperlink -->
-            <a href="@routes.HomeController.searchByTag(video.getVideoId())"
-               style="color: blue; text-decoration: underline;">
-                Tags
-            </a>
-        </li>
-        }
-    </ol>
-</div>
+@{
+    implicit val reqHeader: RequestHeader = request.asScala()
 }
+
+@main("TubeLytics") {
+
+    <div class="container">
+        <h1 class="title text-center">Welcome to TubeLytics</h1>
+
+            <!-- Search Form -->
+        <form action="@routes.HomeController.search()" method="get" class="search-form">
+            <input type="text" name="query" class="search-input" placeholder="Enter search terms" required>
+            <button type="submit" class="search-btn">Search</button>
+        </form>
+
+            <!-- Search History -->
+        @for(entry <- searchHistory.asScala) {
+            <div class="search-section">
+                <h3>Search terms: <strong>@entry.getKey()</strong></h3>
+
+                    <!-- List of Videos -->
+                <ol class="video-list">
+                @for((video, index) <- entry.getValue().asScala.zipWithIndex) {
+                    <li class="video-item">
+                        <div class="video-thumbnail">
+                            <h2>Testing Template Changes</h2>
+                            <img src="@video.getThumbnailUrl()" alt="Thumbnail">
+                        </div>
+                        <div class="video-details">
+                            <p><strong>@(index + 1). Title:</strong> <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a></p>
+                            <p><strong>Channel:</strong> <a href="@routes.HomeController.channelProfile(video.getChannelId())">@video.getChannelTitle()</a></p>
+                            <p><strong>Description:</strong> @video.getDescription()</p>
+                            <p><a href="@routes.HomeController.viewTags(video.getVideoId())" class="tags-link">Tags</a></p>
+                        </div>
+                    </li>
+                }
+                </ol>
+            </div>
+        }
+    </div>
+
+        <!-- Inline CSS for Styling -->
+    <style>
+            .container {
+                width: 80%;
+                margin: 0 auto;
+                font-family: Arial, sans-serif;
+            }
+
+            .title {
+                text-align: center;
+                margin: 20px 0;
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .search-form {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .search-input {
+                width: 60%;
+                padding: 10px;
+                font-size: 16px;
+            }
+
+            .search-btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                margin-left: 10px;
+            }
+
+            .search-section {
+                margin-top: 30px;
+                border-top: 1px solid #ddd;
+                padding-top: 20px;
+            }
+
+            .video-list {
+                list-style: none;
+                padding: 0;
+            }
+
+            .video-item {
+                display: flex;
+                margin-bottom: 20px;
+                align-items: flex-start;
+            }
+
+            .video-thumbnail img {
+                width: 120px;
+                height: auto;
+                margin-right: 20px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+            }
+
+            .video-details {
+                flex-grow: 1;
+            }
+
+            .video-details p {
+                margin: 5px 0;
+                line-height: 1.4;
+            }
+
+            .tags-link {
+                color: #007bff;
+                text-decoration: underline;
+                font-weight: bold;
+            }
+    </style>
 }

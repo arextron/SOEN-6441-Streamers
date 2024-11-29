@@ -3,7 +3,7 @@
 // 40278847, 40310953, 40272435
 package controllers;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,11 +28,6 @@ import static play.test.Helpers.*;
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.ChannelSnippet;
 import com.google.api.services.youtube.model.ChannelStatistics;
-
-import com.google.api.services.youtube.model.Video;
-import com.google.api.services.youtube.model.VideoSnippet;
-import com.google.api.services.youtube.model.Thumbnail;
-import com.google.api.services.youtube.model.ThumbnailDetails;
 
 @RunWith(MockitoJUnitRunner.class)
 

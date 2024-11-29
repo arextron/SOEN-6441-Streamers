@@ -2,14 +2,15 @@
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
 package controllers;
-
+import akka.stream.OverflowStrategy;
+import play.libs.streams.ActorFlow;
+import actors.UserActor;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import play.mvc.*;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
-import views.html.searchResults;
 import views.html.channelProfile;
 import play.cache.SyncCacheApi;
 import com.google.api.services.youtube.model.Channel;
@@ -20,12 +21,17 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import akka.actor.ActorSystem;
+import akka.stream.Materializer;
+import play.mvc.WebSocket;
 
 
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
     private final SyncCacheApi cache;
+    private final ActorSystem actorSystem;
+    private final Materializer materializer;
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
     // Cache for storing search results
     private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
@@ -40,9 +46,22 @@ public class HomeController extends Controller {
      */
 
     @Inject
-    public HomeController(YouTubeService youTubeService, SyncCacheApi cache) {
+    public HomeController(YouTubeService youTubeService, SyncCacheApi cache, ActorSystem actorSystem, Materializer materializer) {
         this.youTubeService = youTubeService;
         this.cache = cache;
+        this.actorSystem = actorSystem;
+        this.materializer = materializer;
+    }
+    public WebSocket searchWebSocket() {
+        return WebSocket.Text.accept(request -> {
+            return ActorFlow.actorRef(
+                    out -> UserActor.props(out, youTubeService),
+                    256, // buffer size
+                    OverflowStrategy.dropHead(), // overflow strategy
+                    actorSystem,
+                    materializer
+            );
+        });
     }
 
     /**
@@ -52,7 +71,7 @@ public class HomeController extends Controller {
      * @return The rendered homepage.
      */
     public Result index(Http.Request request) {
-        return ok(index.render());
+        return ok(index.render("TubeLytics", request));
     }
 
     /**
@@ -80,11 +99,20 @@ public class HomeController extends Controller {
             // Return cached result
             List<VideoResult> cachedVideos = videoCache.get(query);
             // Add to search history as usual
-            searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, cachedVideos));
-            if (searchHistory.size() > 10) {
-                searchHistory.removeLast();
+            LinkedList<Map.Entry<String, List<VideoResult>>> sessionSearchHistory = cache.getOptional(cacheKey)
+                    .map(obj -> (LinkedList<Map.Entry<String, List<VideoResult>>>) obj)
+                    .orElseGet(LinkedList::new);
+
+            // Add to search history
+            sessionSearchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, cachedVideos));
+            if (sessionSearchHistory.size() > 10) {
+                sessionSearchHistory.removeLast();
             }
-            return CompletableFuture.completedFuture(ok(results.render(searchHistory)));
+
+            // Save the updated history in cache
+            cache.set(cacheKey, sessionSearchHistory);
+
+            return CompletableFuture.completedFuture(ok(results.render(sessionSearchHistory, request)));
         }
 
         // If not in cache, fetch from YouTube API and store in cache
@@ -98,26 +126,26 @@ public class HomeController extends Controller {
                     .collect(Collectors.toList());
 
             // Retrieve or initialize session-specific search history
-            LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = cache.getOptional(cacheKey)
+            LinkedList<Map.Entry<String, List<VideoResult>>> sessionSearchHistory = cache.getOptional(cacheKey)
                     .map(obj -> (LinkedList<Map.Entry<String, List<VideoResult>>>) obj)
                     .orElseGet(LinkedList::new);
 
-            // Add to session-specific search history
             // Store the result in the cache
             videoCache.put(query, processedVideos);
 
             // Add to search history
-            searchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
-            if (searchHistory.size() > 10) {
-                searchHistory.removeLast();
+            sessionSearchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
+            if (sessionSearchHistory.size() > 10) {
+                sessionSearchHistory.removeLast();
             }
 
             // Save the updated history in cache
-            cache.set(cacheKey, searchHistory);
+            cache.set(cacheKey, sessionSearchHistory);
 
-            return ok(results.render(searchHistory)).addingToSession(request, "sessionId", sessionId);
+            return ok(results.render(sessionSearchHistory, request)).addingToSession(request, "sessionId", sessionId);
         });
     }
+
 
     /**
      * Displays video details, including tags.

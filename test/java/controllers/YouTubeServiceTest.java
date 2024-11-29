@@ -8,7 +8,7 @@ import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
