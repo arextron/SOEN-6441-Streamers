@@ -2,7 +2,11 @@
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
 package controllers;
+import actors.WordStatsActor;
+import akka.actor.ActorRef;
 import akka.stream.OverflowStrategy;
+import com.fasterxml.jackson.databind.JsonNode;
+import play.libs.Json;
 import play.libs.streams.ActorFlow;
 import actors.UserActor;
 import models.VideoResult;
@@ -15,6 +19,7 @@ import views.html.channelProfile;
 import play.cache.SyncCacheApi;
 import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -202,43 +207,38 @@ public class HomeController extends Controller {
             );
         }
 
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                List<VideoResult> videos = youTubeService.searchVideos(query);
+        // Create the WordStatsActor
+        ActorRef wordStatsActor = actorSystem.actorOf(WordStatsActor.props(youTubeService));
 
-                if (videos.isEmpty()) {
-                    return ok("No word frequency data available for \"" + query + "\".");
+        // Ask the actor to compute word stats
+        CompletionStage<Object> statsFuture = akka.pattern.Patterns.ask(
+                wordStatsActor,
+                query,
+                Duration.ofSeconds(5) // Timeout for response
+        );
+
+        // Handle the actor's response
+        return statsFuture.thenApply(response -> {
+            if (response instanceof String) {
+                JsonNode jsonResponse = Json.parse((String) response);
+                if (jsonResponse.has("error")) {
+                    return Results.internalServerError(jsonResponse);
+                } else if (jsonResponse.has("message")) {
+                    return ok(views.html.wordStats.render(query, new LinkedHashMap<>(), jsonResponse.get("message").asText()));
+                } else {
+                    // Deserialize the JSON into a Map<String, Long>
+                    Map<String, Long> wordFrequency = new LinkedHashMap<>();
+                    jsonResponse.fields().forEachRemaining(entry -> {
+                        wordFrequency.put(entry.getKey(), entry.getValue().asLong()); // Convert explicitly to Long
+                    });
+                    return ok(views.html.wordStats.render(query, wordFrequency, null));
                 }
-
-                // Process only the first 50 videos (or fewer if not enough results are available)
-                List<VideoResult> latestVideos = videos.stream()
-                        .filter(video -> video.getDescription() != null && !video.getDescription().isEmpty())
-                        .limit(50)
-                        .collect(Collectors.toList());
-
-                Map<String, Long> wordFrequency = latestVideos.stream()
-                        .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+")))
-                        .map(String::toLowerCase)
-                        .filter(word -> !word.isEmpty())
-                        .collect(Collectors.groupingBy(word -> word, Collectors.counting()));
-
-                Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
-                        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                        .limit(100)
-                        .collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                Map.Entry::getValue,
-                                (e1, e2) -> e1,
-                                LinkedHashMap::new
-                        ));
-
-                return ok(views.html.wordStats.render(query, sortedWordFrequency));
-            } catch (Exception e) {
-                logger.error("Error processing word statistics for query: " + query, e);
-                return internalServerError("An error occurred while processing your request.");
+            } else {
+                return internalServerError("Unexpected response from WordStatsActor");
             }
         });
     }
+
 
     /**
      * Displays the channel profile page along with the latest videos.

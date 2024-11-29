@@ -68,12 +68,24 @@
                 sectionDiv.className = 'search-section';
 
                 sectionDiv.innerHTML = `
-                <h2 class="search-title">Search terms: ${query} (Results: <span id="count-${query}">0</span>)</h2>
-                <div class="video-list" id="videos-${query}"></div>
-            `;
+        <h2 class="search-title">
+            Search terms: ${query} (Results: <span id="count-${query}">0</span>)
+            <a href="/wordStats?query=${encodeURIComponent(query)}" target="_blank" class="word-stats-link">More stats</a>
+        </h2>
+        <div class="video-list" id="videos-${query}"></div>
+    `;
 
+                // Add the new section at the top
                 resultsDiv.prepend(sectionDiv);
+
+                // Keep only the latest 10 search terms
+                const searchSections = resultsDiv.children;
+                if (searchSections.length > 10) {
+                    // Remove the oldest search section (last one in the list)
+                    resultsDiv.removeChild(searchSections[searchSections.length - 1]);
+                }
             }
+
             function updateVideoList(query, videos) {
                 const videoListDiv = document.getElementById(`videos-${query}`);
                 const countSpan = document.getElementById(`count-${query}`);
