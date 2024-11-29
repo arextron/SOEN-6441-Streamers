@@ -5,7 +5,7 @@ import akka.actor.ActorRef;
 import akka.actor.Props;
 import com.google.api.services.youtube.model.Channel;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import play.libs.Json;
 
 import java.util.List;

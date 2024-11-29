@@ -1,7 +1,7 @@
 package modules;
 
 import com.google.inject.AbstractModule;
-import models.YouTubeService;
+import services.YouTubeService;
 
 /**
  * Module to configure dependency injection.

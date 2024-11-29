@@ -5,17 +5,12 @@ package controllers;
 import akka.stream.OverflowStrategy;
 import play.libs.streams.ActorFlow;
 import actors.UserActor;
-import akka.actor.PoisonPill;
-import akka.stream.OverflowStrategy;
-import akka.stream.javadsl.Sink;
-import akka.stream.javadsl.Source;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import play.mvc.*;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
-import views.html.searchResults;
 import views.html.channelProfile;
 import play.cache.SyncCacheApi;
 import com.google.api.services.youtube.model.Channel;
@@ -26,13 +21,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.stream.Materializer;
-import akka.stream.javadsl.Flow;
 import play.mvc.WebSocket;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 
 public class HomeController extends Controller {

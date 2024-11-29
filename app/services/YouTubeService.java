@@ -1,9 +1,11 @@
-package models;
+package services;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
+import models.VideoResult;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

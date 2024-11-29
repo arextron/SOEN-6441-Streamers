@@ -2,7 +2,7 @@ package modules;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import models.YouTubeService;
+import services.YouTubeService;
 
 /**
  * Provider for YouTubeService to allow dependency injection.

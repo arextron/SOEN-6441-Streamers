@@ -4,7 +4,7 @@ import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import models.VideoResult;
-import models.YouTubeService;
+import services.YouTubeService;
 import play.libs.Json;
 import scala.concurrent.duration.Duration;
 

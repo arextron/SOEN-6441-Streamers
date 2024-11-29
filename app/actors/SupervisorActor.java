@@ -6,7 +6,7 @@ import akka.actor.OneForOneStrategy;
 import akka.actor.SupervisorStrategy;
 import akka.actor.Props;
 import akka.japi.pf.DeciderBuilder;
-import models.YouTubeService;
+import services.YouTubeService;
 import scala.concurrent.duration.Duration;
 
 import javax.inject.Inject;
