@@ -35,15 +35,13 @@
                     createSearchTermSection(query); // Create a new section for this search term
                 }
 
-                if (ws) {
-                    ws.close(); // Close any existing WebSocket connections
-                }
+                // Start a new WebSocket connection for the query
                 startWebSocket(query);
             };
 
             function startWebSocket(query) {
                 const wsUrl = "@routes.HomeController.searchWebSocket().webSocketURL(request)";
-                ws = new WebSocket(wsUrl);
+                const ws = new WebSocket(wsUrl);
 
                 ws.onopen = function() {
                     ws.send(query); // Send search query to server
@@ -57,9 +55,10 @@
                 };
 
                 ws.onclose = function() {
-                    console.log("WebSocket connection closed");
+                    console.log(`WebSocket for query '${query}' closed`);
                 };
             }
+
 
             function createSearchTermSection(query) {
                 const resultsDiv = document.getElementById('results');
@@ -116,6 +115,12 @@
                         searchData.videos.push(video.videoId); // Track the added video
                     }
                 });
+
+                // Limit the list to the latest 10 videos
+                while (videoListDiv.children.length > 10) {
+                    videoListDiv.removeChild(videoListDiv.firstChild);
+                    searchData.videos.shift(); // Remove the oldest video ID
+                }
 
                 // Update indices for all videos in ascending order
                 let currentIndex = 1;
