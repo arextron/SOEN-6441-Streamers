@@ -1,25 +1,28 @@
-@(query: String, wordFrequency: Map[String, Long])
+@(query: String, wordFrequency: Map[String, Long], message: String)
 
-@main("Word Statistics for " + query) {
-    <!-- Display the heading for the word statistics page -->
-    <h2>Word Frequency Statistics for "@query"</h2>
+    @main("Word Statistics for " + query) {
+        <h2>Word Frequency Statistics for "@query"</h2>
 
-        <!-- Create a table to display the word frequency statistics -->
-    <table>
-        <thead>
-            <tr>
-                <th>Word</th> <!-- Column for words -->
-                <th>Frequency</th> <!-- Column for word frequency -->
-            </tr>
-        </thead>
-        <tbody>
-                <!-- Loop through the word frequency map and display each word and its count -->
+        @if(message != null) {
+            <p>@message</p>
+        } else if(wordFrequency.isEmpty) {
+        <p>No word frequency data available.</p>
+        } else {
+        <table border="1" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Word</th>
+                    <th style="text-align: right;">Frequency</th>
+                </tr>
+            </thead>
+            <tbody>
             @for((word, count) <- wordFrequency) {
                 <tr>
-                    <td>@word</td> <!-- Display the word -->
-                    <td>@count</td> <!-- Display the frequency of the word -->
+                    <td>@word</td>
+                    <td style="text-align: right;">@count</td>
                 </tr>
             }
-        </tbody>
-    </table>
-}
+            </tbody>
+        </table>
+        }
+    }

@@ -1,48 +1,44 @@
 package actors;
 
 import akka.actor.AbstractActor;
-import akka.actor.ActorRef;
 import akka.actor.Props;
+import com.fasterxml.jackson.databind.JsonNode;
+import play.libs.Json;
 import models.VideoResult;
 import services.YouTubeService;
-import play.libs.Json;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Actor for computing word statistics.
- */
 public class WordStatsActor extends AbstractActor {
 
-    private final String query;
-    private final ActorRef out;
     private final YouTubeService youTubeService;
 
-    public static Props props(String query, ActorRef out, YouTubeService youTubeService) {
-        return Props.create(WordStatsActor.class, () -> new WordStatsActor(query, out, youTubeService));
+    // Constructor to inject YouTubeService
+    public WordStatsActor(YouTubeService youTubeService) {
+        this.youTubeService = youTubeService;
     }
 
-    public WordStatsActor(String query, ActorRef out, YouTubeService youTubeService) {
-        this.query = query;
-        this.out = out;
-        this.youTubeService = youTubeService;
-
-        computeWordStats();
+    public static Props props(YouTubeService youTubeService) {
+        return Props.create(WordStatsActor.class, () -> new WordStatsActor(youTubeService));
     }
 
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .match(String.class, this::computeWordStats)
                 .build();
     }
 
-    private void computeWordStats() {
+    private void computeWordStats(String query) {
         try {
             List<VideoResult> videos = youTubeService.searchVideos(query);
 
             if (videos.isEmpty()) {
-                out.tell(Json.newObject().put("message", "No word frequency data available for \"" + query + "\"").toString(), self());
+                getSender().tell(
+                        Json.newObject().put("message", "No word frequency data available for \"" + query + "\"").toString(),
+                        getSelf()
+                );
                 return;
             }
 
@@ -55,7 +51,10 @@ public class WordStatsActor extends AbstractActor {
                     .flatMap(video -> Arrays.stream(video.getDescription().split("\\W+")))
                     .map(String::toLowerCase)
                     .filter(word -> !word.isEmpty())
-                    .collect(Collectors.groupingBy(word -> word, Collectors.counting()));
+                    .collect(Collectors.groupingBy(
+                            word -> word,
+                            Collectors.counting() // Ensures values are stored as Long
+                    ));
 
             Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
@@ -67,9 +66,12 @@ public class WordStatsActor extends AbstractActor {
                             LinkedHashMap::new
                     ));
 
-            out.tell(Json.toJson(sortedWordFrequency).toString(), self());
+            getSender().tell(Json.toJson(sortedWordFrequency).toString(), getSelf());
         } catch (Exception e) {
-            out.tell(Json.newObject().put("error", "An error occurred while processing your request.").toString(), self());
+            getSender().tell(
+                    Json.newObject().put("error", "An error occurred while processing your request.").toString(),
+                    getSelf()
+            );
         }
     }
 }
