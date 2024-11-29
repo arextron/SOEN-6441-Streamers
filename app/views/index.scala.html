@@ -3,228 +3,240 @@
 @import play.api.mvc.RequestHeader
 
 @{
-    implicit val reqHeader: RequestHeader = request.asScala()
+implicit val reqHeader: RequestHeader = request.asScala()
 }
 
 @main("YT Lytics") {
 
-    <div class="center-container">
-        <h1 class="title">Welcome to YT Lytics</h1>
+<!-- Main Container -->
+<div class="center-container">
+    <h1 class="title">Welcome to YT Lytics</h1>
 
-            <!-- Search Form -->
-        <form id="searchForm" class="search-form">
-            <input type="text" id="searchQuery" name="query" placeholder="Enter search terms" required class="search-input">
-            <button type="submit" class="search-btn">Go!</button>
-        </form>
+    <!-- Search Form -->
+    <form id="searchForm" class="search-form">
+        <input type="text" id="searchQuery" name="query" placeholder="Enter search terms" required class="search-input">
+        <button type="submit" class="search-btn">Go!</button>
+    </form>
 
-            <!-- Results Section -->
-        <div id="results" class="results-container"></div>
-    </div>
+    <!-- Results Section -->
+    <div id="results" class="results-container"></div>
+</div>
 
-    <script type="text/javascript">
-            let ws;
-            const resultData = {}; // Object to keep track of results and indices for each search term
+<!-- JavaScript -->
+<script type="text/javascript">
+    let resultData = {}; // Tracks search results and indices for each search term
 
-            document.getElementById('searchForm').onsubmit = function(event) {
-                event.preventDefault();
-                const query = document.getElementById('searchQuery').value;
+    document.getElementById('searchForm').onsubmit = function (event) {
+        event.preventDefault();
+        const query = document.getElementById('searchQuery').value;
 
-                // Initialize search term data if not already present
-                if (!resultData[query]) {
-                    resultData[query] = { index: 1, videos: [] };
-                    createSearchTermSection(query); // Create a new section for this search term
-                }
+        // Initialize data for the search term if not present
+        if (!resultData[query]) {
+            resultData[query] = { videos: [] };
+            createSearchTermSection(query); // Create a new section for this term
+        }
 
-                // Start a new WebSocket connection for the query
-                startWebSocket(query);
-            };
+        // Start WebSocket for live updates
+        startWebSocket(query);
+    };
 
-            function startWebSocket(query) {
-                const wsUrl = "@routes.HomeController.searchWebSocket().webSocketURL(request)";
-                const ws = new WebSocket(wsUrl);
+    function startWebSocket(query) {
+        const wsUrl = "@routes.HomeController.searchWebSocket().webSocketURL(request)";
+        const ws = new WebSocket(wsUrl);
 
-                ws.onopen = function() {
-                    ws.send(query); // Send search query to server
-                };
+        ws.onopen = function () {
+            ws.send(query); // Send search query
+        };
 
-                ws.onmessage = function(event) {
-                    const videos = JSON.parse(event.data);
-                    if (Array.isArray(videos)) {
-                        updateVideoList(query, videos); // Update results dynamically
-                    }
-                };
-
-                ws.onclose = function() {
-                    console.log(`WebSocket for query '${query}' closed`);
-                };
+        ws.onmessage = function (event) {
+            const videos = JSON.parse(event.data);
+            if (Array.isArray(videos)) {
+                updateVideoList(query, videos); // Update results dynamically
             }
+        };
 
+        ws.onerror = function () {
+            console.error("WebSocket error occurred.");
+        };
 
-            function createSearchTermSection(query) {
-                const resultsDiv = document.getElementById('results');
-                const sectionDiv = document.createElement('div');
-                sectionDiv.id = `section-${query}`;
-                sectionDiv.className = 'search-section';
+        ws.onclose = function () {
+            console.log(`WebSocket for query '${query}' closed.`);
+        };
+    }
 
-                sectionDiv.innerHTML = `
-        <h2 class="search-title">
-            Search terms: ${query} (Results: <span id="count-${query}">0</span>)
-            <a href="/wordStats?query=${encodeURIComponent(query)}" target="_blank" class="word-stats-link">More stats</a>
-        </h2>
-        <div class="video-list" id="videos-${query}"></div>
-    `;
+    function createSearchTermSection(query) {
+        const resultsDiv = document.getElementById('results');
+        const sectionDiv = document.createElement('div');
+        sectionDiv.id = `section-${query}`;
+        sectionDiv.className = 'search-section';
 
-                // Add the new section at the top
-                resultsDiv.prepend(sectionDiv);
+        sectionDiv.innerHTML = `
+            <h2 class="search-title">
+                Search terms: ${query} (Results: <span id="count-${query}">0</span>)
+                <a href="/wordStats?query=${encodeURIComponent(query)}" target="_blank" class="word-stats-link">More stats</a>
+            </h2>
+            <div class="video-list" id="videos-${query}"></div>
+        `;
 
-                // Keep only the latest 10 search terms
-                const searchSections = resultsDiv.children;
-                if (searchSections.length > 10) {
-                    // Remove the oldest search section (last one in the list)
-                    resultsDiv.removeChild(searchSections[searchSections.length - 1]);
-                }
+        resultsDiv.prepend(sectionDiv);
+
+        // Keep only the latest 10 search terms
+        const searchSections = resultsDiv.children;
+        if (searchSections.length > 10) {
+            resultsDiv.removeChild(searchSections[searchSections.length - 1]);
+        }
+    }
+
+    function updateVideoList(query, videos) {
+        const videoListDiv = document.getElementById(`videos-${query}`);
+        const countSpan = document.getElementById(`count-${query}`);
+        const searchData = resultData[query];
+
+        // Add new videos and avoid duplicates
+        videos.forEach(function (video) {
+            if (!searchData.videos.find((v) => v.videoId === video.videoId)) {
+                const videoElement = document.createElement("div");
+                videoElement.id = video.videoId;
+                videoElement.className = "video-item";
+
+                videoElement.innerHTML = `
+                    <div class="video-thumbnail">
+                        <img src="${video.thumbnailUrl}" alt="Thumbnail">
+                    </div>
+                    <div class="video-details">
+                        <h3>
+                            <span class="video-index"></span> <!-- Numbering placeholder -->
+                            <a href="${video.videoUrl}" target="_blank">${video.title}</a>
+                        </h3>
+                        <p><strong>Description:</strong> ${video.description}</p>
+                        <p><strong>Channel:</strong> <a href="${video.channelUrl}" target="_blank">${video.channelTitle}</a></p>
+                        <button class="tags-btn">
+                            <a href="/viewTags/${video.videoId}" style="text-decoration: none; color: inherit;">Tags</a>
+                        </button>
+                    </div>
+                `;
+
+                videoListDiv.appendChild(videoElement);
+                searchData.videos.push(video); // Track the added video
             }
+        });
 
-            function updateVideoList(query, videos) {
-                const videoListDiv = document.getElementById(`videos-${query}`);
-                const countSpan = document.getElementById(`count-${query}`);
-                const searchData = resultData[query];
+        // Limit the list to the latest 10 videos
+        while (videoListDiv.children.length > 10) {
+            videoListDiv.removeChild(videoListDiv.firstChild);
+            searchData.videos.shift();
+        }
 
-                videos.forEach(function (video) {
-                    // Check if the video is already in the list to prevent duplicates
-                    if (!searchData.videos.includes(video.videoId)) {
-                        const videoElement = document.createElement('div');
-                        videoElement.id = video.videoId; // Use videoId to prevent duplicates
-                        videoElement.className = 'video-item';
+        // Recalculate numbering for all videos
+        let currentIndex = 1; // Always start numbering from 1
+        Array.from(videoListDiv.children).forEach((videoItem) => {
+            const indexSpan = videoItem.querySelector('.video-index');
+            indexSpan.textContent = `${currentIndex}.`;
+            currentIndex++;
+        });
 
-                        // Add the video details
-                        videoElement.innerHTML = `
-                <div class="video-thumbnail">
-                    <img src="${video.thumbnailUrl}" alt="Thumbnail">
-                </div>
-                <div class="video-details">
-                    <h3><span class="video-index"></span>. <a href="${video.videoUrl}" target="_blank">${video.title}</a></h3>
-                    <p><strong>Description:</strong> ${video.description}</p>
-                    <p><strong>Channel:</strong> <a href="${video.channelUrl}" target="_blank">${video.channelTitle}</a></p>
-                    <p><a href="#" class="tags-link">Tags</a></p>
-                </div>
-            `;
+        // Update the result count for this search term
+        countSpan.textContent = searchData.videos.length;
+    }
+</script>
 
-                        // Append the new video to the bottom of the video list
-                        videoListDiv.appendChild(videoElement);
-                        searchData.videos.push(video.videoId); // Track the added video
-                    }
-                });
 
-                // Limit the list to the latest 10 videos
-                while (videoListDiv.children.length > 10) {
-                    videoListDiv.removeChild(videoListDiv.firstChild);
-                    searchData.videos.shift(); // Remove the oldest video ID
-                }
+<!-- CSS -->
+<style>
+    .center-container {
+        text-align: center;
+        margin-top: 50px;
+        font-family: Arial, sans-serif;
+    }
 
-                // Update indices for all videos in ascending order
-                let currentIndex = 1;
-                Array.from(videoListDiv.children).forEach((videoItem) => {
-                    const indexSpan = videoItem.querySelector('.video-index');
-                    indexSpan.textContent = currentIndex++;
-                });
+    .title {
+        font-size: 28px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
 
-                // Update the result count for this search term
-                countSpan.textContent = searchData.videos.length;
-            }
+    .search-form {
+        margin-bottom: 30px;
+    }
 
-    </script>
+    .search-input {
+        width: 60%;
+        padding: 10px;
+        font-size: 16px;
+    }
 
-    <style>
-            /* General Container */
-            .center-container {
-                text-align: center;
-                margin-top: 50px;
-                font-family: Arial, sans-serif;
-            }
+    .search-btn {
+        padding: 10px 20px;
+        font-size: 16px;
+        margin-left: 10px;
+    }
 
-            .title {
-                font-size: 28px;
-                margin-bottom: 20px;
-                font-weight: bold;
-            }
+    .results-container {
+        margin-top: 20px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 
-            /* Search Form Styling */
-            .search-form {
-                margin-bottom: 30px;
-            }
+    .search-section {
+        width: 80%;
+        margin-bottom: 30px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
 
-            .search-input {
-                width: 60%;
-                padding: 10px;
-                font-size: 16px;
-            }
+    .search-title {
+        font-size: 20px;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
 
-            .search-btn {
-                padding: 10px 20px;
-                font-size: 16px;
-                margin-left: 10px;
-            }
+    .video-list {
+        margin-top: 10px;
+    }
 
-            /* Results Section */
-            .results-container {
-                margin-top: 20px;
-                text-align: left;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
+    .video-item {
+        display: flex;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 10px;
+    }
 
-            .search-section {
-                width: 80%;
-                margin-bottom: 30px;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                background-color: #f9f9f9;
-            }
+    .video-thumbnail img {
+        width: 150px;
+        height: auto;
+        margin-right: 20px;
+        border-radius: 4px;
+    }
 
-            .search-title {
-                font-size: 20px;
-                margin-bottom: 15px;
-                font-weight: bold;
-            }
+    .video-details {
+        flex-grow: 1;
+    }
 
-            .video-list {
-                margin-top: 10px;
-            }
+    .video-details h3 {
+        margin: 0 0 10px;
+    }
 
-            .video-item {
-                display: flex;
-                margin-bottom: 15px;
-                border-bottom: 1px solid #ddd;
-                padding-bottom: 10px;
-            }
+    .video-details p {
+        margin: 5px 0;
+        line-height: 1.5;
+    }
 
-            .video-thumbnail img {
-                width: 150px;
-                height: auto;
-                margin-right: 20px;
-                border-radius: 4px;
-            }
+    .tags-btn {
+        background-color: #007bff;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
 
-            .video-details {
-                flex-grow: 1;
-            }
-
-            .video-details h3 {
-                margin: 0 0 10px;
-            }
-
-            .video-details p {
-                margin: 5px 0;
-                line-height: 1.5;
-            }
-
-            .tags-link {
-                color: #007bff;
-                text-decoration: underline;
-                font-weight: bold;
-            }
-    </style>
+    .tags-btn:hover {
+        background-color: #0056b3;
+    }
+</style>
 }

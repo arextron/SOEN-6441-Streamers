@@ -3,6 +3,7 @@
 // 40278847, 40310953, 40272435
 package controllers;
 import actors.WordStatsActor;
+import actors.TagsActor;
 import akka.actor.ActorRef;
 import akka.stream.OverflowStrategy;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import akka.actor.ActorSystem;
 import akka.stream.Materializer;
 import play.mvc.WebSocket;
+import akka.pattern.Patterns;
 
 
 public class HomeController extends Controller {
@@ -159,14 +161,24 @@ public class HomeController extends Controller {
      * @return A CompletionStage that returns the rendered video details.
      */
     public CompletionStage<Result> showVideoDetails(String videoId) {
-        return CompletableFuture.supplyAsync(() -> {
-            VideoResult video = youTubeService.getVideoDetails(videoId);
-            if (video == null) {
-                return notFound("Video not found");
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
+
+        CompletionStage<Object> futureResult = Patterns.ask(
+                tagsActor,
+                new TagsActor.ViewVideoDetails(videoId),
+                Duration.ofSeconds(5)
+        );
+
+        return futureResult.thenApply(response -> {
+            if (response instanceof VideoResult) {
+                VideoResult video = (VideoResult) response;
+                return ok(videoDetails.render(video));
+            } else {
+                return internalServerError("Failed to fetch video details.");
             }
-            return ok(videoDetails.render(video));
         });
     }
+
     /**
      * View tags for a search query and render a page with videos and their tags.
      *
@@ -174,11 +186,25 @@ public class HomeController extends Controller {
      * @return A CompletionStage rendering videos related to the query.
      */
     public CompletionStage<Result> viewTags(String query) {
-        return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideos(query);
-            return ok(views.html.tagResults.render(query, videos));
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
+
+        CompletionStage<Object> futureResult = Patterns.ask(
+                tagsActor,
+                new TagsActor.ViewTags(query),
+                Duration.ofSeconds(5)
+        );
+
+        return futureResult.thenApply(response -> {
+            if (response instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<VideoResult> videos = (List<VideoResult>) response;
+                return ok(views.html.tagResults.render(query, videos));
+            } else {
+                return internalServerError("Failed to fetch videos for the query.");
+            }
         });
     }
+
 
     /**
      * Fetch videos related to a specific tag and render them.
@@ -187,9 +213,22 @@ public class HomeController extends Controller {
      * @return A CompletionStage rendering videos associated with the tag.
      */
     public CompletionStage<Result> searchByTag(String tag) {
-        return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideosByTag(tag);
-            return ok(views.html.tagResults.render(tag, videos));
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
+
+        CompletionStage<Object> futureResult = Patterns.ask(
+                tagsActor,
+                new TagsActor.SearchByTag(tag),
+                Duration.ofSeconds(5)
+        );
+
+        return futureResult.thenApply(response -> {
+            if (response instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<VideoResult> videos = (List<VideoResult>) response;
+                return ok(views.html.tagResults.render(tag, videos));
+            } else {
+                return internalServerError("Failed to fetch videos for the tag.");
+            }
         });
     }
 

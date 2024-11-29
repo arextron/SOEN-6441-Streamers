@@ -4,29 +4,32 @@
 
 @main("Videos for Tag: " + tag) {
 
-<!-- Header Section -->
+<!-- Page Header -->
 <div style="text-align: center; margin-bottom: 20px;">
   <h2>Videos for Tag: "@tag"</h2>
 </div>
 
-<!-- Check if there are no videos -->
+<!-- No Videos Found -->
 @if(videos.isEmpty) {
-<p>No videos found for the tag "@tag".</p>
+<p style="text-align: center; font-size: 16px; color: red;">No videos found for the tag "@tag".</p>
 } else {
-<ul>
+<ul style="list-style: none; padding: 0; margin: 0;">
   <!-- Loop through videos and display details -->
   @for(video <- videos.asScala) {
   <li style="margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">
+
     <!-- Video Title -->
     <div style="margin-bottom: 10px;">
       <strong>Title:</strong>
-      <a href="@video.getVideoUrl()" target="_blank">@video.getTitle()</a>
+      <a href="@video.getVideoUrl()" target="_blank" style="color: blue; text-decoration: underline;">@video.getTitle()</a>
     </div>
 
     <!-- Channel Title -->
     <div style="margin-bottom: 10px;">
       <strong>Channel:</strong>
-      <a href="@video.getChannelUrl()" target="_blank">@video.getChannelTitle()</a>
+      <a href="@routes.HomeController.channelProfile(video.getChannelId())" target="_blank" style="color: blue; text-decoration: underline;">
+        @video.getChannelTitle()
+      </a>
     </div>
 
     <!-- Video Description -->
@@ -35,13 +38,13 @@
     </div>
 
     <!-- Video Thumbnail -->
-    <div style="margin-bottom: 10px;">
-      <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto;">
+    <div style="margin-bottom: 10px; text-align: center;">
+      <img src="@video.getThumbnailUrl()" alt="Thumbnail" style="max-width: 150px; height: auto; border: 1px solid #ccc; border-radius: 5px;">
     </div>
 
     <!-- Video Tags -->
     @if(video.getTags() != null && video.getTags().nonEmpty) {
-    <div>
+    <div style="margin-bottom: 10px;">
       <strong>Tags:</strong>
       @for(tag <- video.getTags().asScala) {
       <a href="@routes.HomeController.searchByTag(tag)" style="color: blue; text-decoration: underline;">
@@ -57,7 +60,7 @@
 }
 
 <!-- Back to Homepage -->
-<div style="margin-top: 20px;">
-  <a href="@routes.HomeController.index()">Back to Homepage</a>
+<div style="margin-top: 20px; text-align: center;">
+  <a href="@routes.HomeController.index()" style="color: blue; text-decoration: underline;">Back to Homepage</a>
 </div>
 }
