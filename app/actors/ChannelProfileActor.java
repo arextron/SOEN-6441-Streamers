@@ -3,6 +3,8 @@ package actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.services.youtube.model.Channel;
 import models.VideoResult;
 import services.YouTubeService;
@@ -43,8 +45,26 @@ public class ChannelProfileActor extends AbstractActor {
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                .matchEquals("fetchChannelProfile", msg -> {
+                    try {
+                        // Fetch channel profile data
+                        Channel channel = youTubeService.getChannelProfile(channelId);
+                        List<VideoResult> videos = youTubeService.getLast10Videos(channelId);
+
+                        // Combine profile and videos into a single JSON response
+                        ObjectNode response = Json.newObject();
+                        response.set("channel", Json.toJson(channel)); // Correct usage of set()
+                        response.set("videos", Json.toJson(videos));   // Correct usage of set()
+
+                        out.tell(response, self());
+                    } catch (Exception e) {
+                        out.tell(Json.newObject().put("error", e.getMessage()), self());
+                    }
+                })
                 .build();
     }
+
+
 
     // Helper class to encapsulate channel data
     public static class ChannelProfileData {

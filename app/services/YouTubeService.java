@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * Service class for interacting with the YouTube API.
  */
 public class YouTubeService {
-    private static final String API_KEY = "AIzaSyCZaFSQMkl2nuD8tuCo43hPvoMua2e3VEY"; // Replace with your actual API key
+    private static final String API_KEY = "AIzaSyCmqUHNCYAyQH9z4bj50fZY7BjM3WjYE00"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
@@ -32,17 +32,60 @@ public class YouTubeService {
         }
     }
 
+    /**
+     * Fetches the last 10 videos of a given channel.
+     * @param channelId The ID of the YouTube channel.
+     * @return A list of VideoResult representing the last 10 videos.
+     * @throws IOException if an error occurs during API communication.
+     */
+    public List<VideoResult> getLast10Videos(String channelId) throws IOException {
+        YouTube.Search.List search = youtube.search().list("id,snippet");
+        search.setChannelId(channelId);
+        search.setType("video");
+        search.setMaxResults(MAX_RESULTS);
+        search.setOrder("date");
+        search.setKey(API_KEY);
+
+        SearchListResponse response = search.execute();
+        List<SearchResult> searchResults = response.getItems();
+
+        return searchResults.stream().map(result ->
+                new VideoResult(
+                        result.getSnippet().getTitle(),
+                        result.getSnippet().getDescription(),
+                        result.getId().getVideoId(),
+                        channelId,
+                        result.getSnippet().getThumbnails().getDefault().getUrl(),
+                        result.getSnippet().getChannelTitle(),
+                        null // Tags are not fetched in this API call; pass null or an empty list
+                )
+        ).collect(Collectors.toList());
+    }
+
+    /**
+     * Fetches the profile of a given channel.
+     * @param channelId The ID of the channel to fetch.
+     * @return The Channel object containing profile details.
+     * @throws IOException if an error occurs during API communication.
+     */
     public Channel getChannelProfile(String channelId) throws IOException {
         YouTube.Channels.List request = youtube.channels().list("snippet,statistics");
         request.setId(channelId);
         request.setKey(API_KEY);
 
         ChannelListResponse response = request.execute();
-        if (response.getItems().isEmpty()) {
-            throw new IOException("No channel found for ID: " + channelId);
+        List<Channel> channels = response.getItems();
+
+        if (channels.isEmpty()) {
+            throw new IOException("No channel found with ID: " + channelId);
         }
-        return response.getItems().get(0);
+
+        return channels.get(0); // Return the first channel (should only be one for the given ID)
     }
+
+
+
+
 
     public List<VideoResult> getLatestVideosByChannel(String channelId, int limit) throws IOException {
         YouTube.Search.List request = youtube.search().list("snippet");
