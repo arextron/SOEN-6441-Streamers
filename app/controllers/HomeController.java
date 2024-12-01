@@ -16,7 +16,6 @@ import play.mvc.*;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
-import views.html.channelProfile;
 import play.cache.SyncCacheApi;
 import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
@@ -31,7 +30,10 @@ import akka.actor.ActorSystem;
 import akka.stream.Materializer;
 import play.mvc.WebSocket;
 import akka.pattern.Patterns;
+import play.mvc.Controller;
+import play.mvc.Result;
 
+import java.util.List;
 
 public class HomeController extends Controller {
 
@@ -285,17 +287,25 @@ public class HomeController extends Controller {
      * @param channelId The ID of the YouTube channel.
      * @return A CompletionStage that returns the rendered channel profile page.
      */
+    /**
+     * Renders the channel profile page.
+     * @param channelId The ID of the channel to display.
+     * @return A CompletionStage that renders the profile view.
+     */
     public CompletionStage<Result> channelProfile(String channelId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                // Fetch channel profile and videos
                 Channel channel = youTubeService.getChannelProfile(channelId);
-                List<VideoResult> latestVideos = youTubeService.getLatestVideosByChannel(channelId, 10);
-                return ok(channelProfile.render(channel, latestVideos));
+                List<VideoResult> videos = youTubeService.getLast10Videos(channelId);
+
+                // Render view with the fetched data
+                return ok(views.html.channelProfile.render(channel, videos));
             } catch (Exception e) {
-                logger.error("Failed to fetch channel information for channel ID: " + channelId, e);
-                return internalServerError("Unable to fetch channel information");
+                return internalServerError("Error fetching channel profile: " + e.getMessage());
             }
         });
     }
+
 
 }

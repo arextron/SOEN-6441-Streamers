@@ -113,6 +113,9 @@ implicit val reqHeader: RequestHeader = request.asScala()
                         <button class="tags-btn">
                             <a href="/viewTags/${video.videoId}" style="text-decoration: none; color: inherit;">Tags</a>
                         </button>
+                <button class="profile-btn">
+                <a href="/channel/${video.channelId}" style="text-decoration: none; color: inherit;">Channel Profile</a>
+                </button>
                     </div>
                 `;
 
@@ -234,6 +237,22 @@ implicit val reqHeader: RequestHeader = request.asScala()
         cursor: pointer;
         border-radius: 5px;
     }
+
+    .profile-btn {
+        background-color: #28a745;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-left: 10px;
+    }
+
+    .profile-btn:hover {
+        background-color: #218838;
+    }
+
 
     .tags-btn:hover {
         background-color: #0056b3;
