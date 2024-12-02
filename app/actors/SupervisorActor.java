@@ -19,8 +19,6 @@ import static akka.actor.SupervisorStrategy.restart;
  */
 public class SupervisorActor extends AbstractActor {
 
-    private final YouTubeService youTubeService;
-
     /**
      * Constructor for SupervisorActor.
      * Initializes the actor with a reference to the YouTubeService.
@@ -29,7 +27,6 @@ public class SupervisorActor extends AbstractActor {
      */
     @Inject
     public SupervisorActor(YouTubeService youTubeService) {
-        this.youTubeService = youTubeService;
     }
 
     /**
