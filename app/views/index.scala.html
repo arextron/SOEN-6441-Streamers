@@ -111,10 +111,10 @@ implicit val reqHeader: RequestHeader = request.asScala()
                         <p><strong>Description:</strong> ${video.description}</p>
                         <p><strong>Channel:</strong> <a href="${video.channelUrl}" target="_blank">${video.channelTitle}</a></p>
                         <button class="tags-btn">
-                            <a href="/viewTags/${video.videoId}" style="text-decoration: none; color: inherit;">Tags</a>
+                            <a href="/viewTags/${video.videoId}" target="_blank" style="text-decoration: none; color: inherit;">Tags</a>
                         </button>
                 <button class="profile-btn">
-                <a href="/channel/${video.channelId}" style="text-decoration: none; color: inherit;">Channel Profile</a>
+                <a href="/channel/${video.channelId}" target="_blank" style="text-decoration: none; color: inherit;">Channel Profile</a>
                 </button>
                     </div>
                 `;
