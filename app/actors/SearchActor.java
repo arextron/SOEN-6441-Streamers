@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 
 /**
  * Actor responsible for fetching new search results periodically.
- * This actor fetches and sends new video search results based on a query to the client
- * while filtering out duplicates.
  */
 public class SearchActor extends AbstractActor {
 
@@ -26,26 +24,10 @@ public class SearchActor extends AbstractActor {
     private final YouTubeService youTubeService;
     private final Set<String> sentVideoIds = new HashSet<>();
 
-    /**
-     * Creates Props for the SearchActor, used for instantiation.
-     *
-     * @param query The search query.
-     * @param out The actor reference for sending data to the client.
-     * @param youTubeService The YouTubeService instance for interacting with the YouTube API.
-     * @return Props for creating the actor.
-     */
     public static Props props(String query, ActorRef out, YouTubeService youTubeService) {
         return Props.create(SearchActor.class, () -> new SearchActor(query, out, youTubeService));
     }
 
-    /**
-     * Constructor for SearchActor.
-     * Initializes the actor, fetches initial search results, and schedules periodic updates.
-     *
-     * @param query The search query.
-     * @param out The actor reference for sending data to the client.
-     * @param youTubeService The YouTubeService instance for interacting with the YouTube API.
-     */
     public SearchActor(String query, ActorRef out, YouTubeService youTubeService) {
         this.query = query;
         this.out = out;
@@ -65,11 +47,6 @@ public class SearchActor extends AbstractActor {
         );
     }
 
-    /**
-     * Creates the message handling behavior for the actor.
-     *
-     * @return The Receive object defining the message handling behavior.
-     */
     @Override
     public Receive createReceive() {
         return receiveBuilder()
@@ -79,10 +56,6 @@ public class SearchActor extends AbstractActor {
                 .build();
     }
 
-    /**
-     * Fetches new videos based on the search query and sends them to the client.
-     * Filters out videos that have already been sent to the client.
-     */
     private void fetchAndSendNewVideos() {
         List<VideoResult> newVideos = youTubeService.searchVideos(query).stream()
                 .filter(video -> !sentVideoIds.contains(video.getVideoId()))
@@ -98,8 +71,5 @@ public class SearchActor extends AbstractActor {
         }
     }
 
-    /**
-     * Message class for triggering a new fetch of videos.
-     */
-    static class FetchNewVideos { }
+    public static class FetchNewVideos { }
 }
