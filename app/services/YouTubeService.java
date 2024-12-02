@@ -13,13 +13,19 @@ import java.util.stream.Collectors;
 
 /**
  * Service class for interacting with the YouTube API.
+ * Provides methods for fetching video details, channel profiles, and search results.
  */
 public class YouTubeService {
-    private static final String API_KEY = "AIzaSyCmqUHNCYAyQH9z4bj50fZY7BjM3WjYE00"; // Replace with your actual API key
+
+    private static final String API_KEY = "AIzaSyAe7aBw3usdV4b3GaCvO23BBkXog7ro-aU"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
 
+    /**
+     * Initializes the YouTube API client.
+     * Configures the YouTube client with default settings and application name.
+     */
     public YouTubeService() {
         try {
             youtube = new YouTube.Builder(
@@ -34,6 +40,7 @@ public class YouTubeService {
 
     /**
      * Fetches the last 10 videos of a given channel.
+     *
      * @param channelId The ID of the YouTube channel.
      * @return A list of VideoResult representing the last 10 videos.
      * @throws IOException if an error occurs during API communication.
@@ -49,8 +56,8 @@ public class YouTubeService {
         SearchListResponse response = search.execute();
         List<SearchResult> searchResults = response.getItems();
 
-        return searchResults.stream().map(result ->
-                new VideoResult(
+        return searchResults.stream()
+                .map(result -> new VideoResult(
                         result.getSnippet().getTitle(),
                         result.getSnippet().getDescription(),
                         result.getId().getVideoId(),
@@ -58,12 +65,13 @@ public class YouTubeService {
                         result.getSnippet().getThumbnails().getDefault().getUrl(),
                         result.getSnippet().getChannelTitle(),
                         null // Tags are not fetched in this API call; pass null or an empty list
-                )
-        ).collect(Collectors.toList());
+                ))
+                .collect(Collectors.toList());
     }
 
     /**
      * Fetches the profile of a given channel.
+     *
      * @param channelId The ID of the channel to fetch.
      * @return The Channel object containing profile details.
      * @throws IOException if an error occurs during API communication.
@@ -83,10 +91,14 @@ public class YouTubeService {
         return channels.get(0); // Return the first channel (should only be one for the given ID)
     }
 
-
-
-
-
+    /**
+     * Fetches the latest videos of a given channel, limited by the specified count.
+     *
+     * @param channelId The ID of the channel.
+     * @param limit The maximum number of videos to fetch.
+     * @return A list of VideoResult for the latest videos.
+     * @throws IOException if an error occurs during API communication.
+     */
     public List<VideoResult> getLatestVideosByChannel(String channelId, int limit) throws IOException {
         YouTube.Search.List request = youtube.search().list("snippet");
         request.setChannelId(channelId);
@@ -97,13 +109,16 @@ public class YouTubeService {
         List<SearchResult> searchResults = request.execute().getItems();
 
         return searchResults.stream()
-                .map(result -> {
-                    String videoId = result.getId().getVideoId();
-                    return getVideoDetails(videoId);
-                })
+                .map(result -> getVideoDetails(result.getId().getVideoId()))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Searches for videos based on a query string.
+     *
+     * @param query The search query string.
+     * @return A list of VideoResult matching the search query.
+     */
     public List<VideoResult> searchVideos(String query) {
         List<VideoResult> videoResults = new ArrayList<>();
         try {
@@ -129,6 +144,12 @@ public class YouTubeService {
         return videoResults;
     }
 
+    /**
+     * Fetches detailed information for a specific video.
+     *
+     * @param videoId The ID of the video.
+     * @return A VideoResult containing detailed information about the video, or null if not found.
+     */
     public VideoResult getVideoDetails(String videoId) {
         try {
             YouTube.Videos.List request = youtube.videos().list("snippet");
@@ -137,7 +158,6 @@ public class YouTubeService {
 
             VideoListResponse response = request.execute();
 
-            // Process the video details reactively
             return response.getItems().stream()
                     .findFirst()
                     .map(video -> new VideoResult(
@@ -156,7 +176,12 @@ public class YouTubeService {
         }
     }
 
-
+    /**
+     * Searches for videos based on a specific tag.
+     *
+     * @param tag The tag to search for.
+     * @return A list of VideoResult associated with the specified tag.
+     */
     public List<VideoResult> searchVideosByTag(String tag) {
         try {
             YouTube.Search.List search = youtube.search().list("snippet");
@@ -168,7 +193,6 @@ public class YouTubeService {
             SearchListResponse response = search.execute();
             List<SearchResult> results = response.getItems();
 
-            // Stream through search results and map to VideoResult
             return results.stream()
                     .map(result -> getVideoDetails(result.getId().getVideoId()))
                     .filter(videoResult -> videoResult != null) // Filter out null values
