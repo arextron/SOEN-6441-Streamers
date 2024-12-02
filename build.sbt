@@ -36,9 +36,9 @@ lazy val root = (project in file("."))
       "controllers.ReverseHomeController",
       ".*\\.template\\.scala",
       // Exclude synthetic Scala templates
-      ".*\\$Lambda\\$.*",
+      ".\\$Lambda\\$.",
       // Exclude synthetic lambda classes
-      "**/*$*.class"
+      "/$.class"
       // Exclude synthetic lambda classes
     )
   )
