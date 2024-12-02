@@ -91,7 +91,7 @@ public class WordStatsActor extends AbstractActor {
             // Sort the word frequencies in descending order and limit to top 100 words
             Map<String, Long> sortedWordFrequency = wordFrequency.entrySet().stream()
                     .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                    .limit(100)
+                    .limit(50)
                     .collect(Collectors.toMap(
                             Map.Entry::getKey,
                             Map.Entry::getValue,

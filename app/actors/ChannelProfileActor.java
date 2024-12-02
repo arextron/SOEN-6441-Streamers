@@ -3,19 +3,16 @@ package actors;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.services.youtube.model.Channel;
 import models.VideoResult;
 import services.YouTubeService;
 import play.libs.Json;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
- *
- * @author Harsukhvir Singh Grewal
- *
  * Actor for handling channel profile tasks.
  * Responsible for fetching channel profile information and the latest videos for a channel.
  * Sends the data to the client through a WebSocket connection.
@@ -29,8 +26,8 @@ public class ChannelProfileActor extends AbstractActor {
     /**
      * Creates Props for the actor, used for actor instantiation.
      *
-     * @param channelId The ID of the YouTube channel.
-     * @param out       The actor reference for sending data to the client.
+     * @param channelId      The ID of the YouTube channel.
+     * @param out            The actor reference for sending data to the client.
      * @param youTubeService The YouTubeService instance for fetching data from the YouTube API.
      * @return Props for creating the actor.
      */
@@ -50,62 +47,41 @@ public class ChannelProfileActor extends AbstractActor {
         this.out = out;
         this.youTubeService = youTubeService;
 
-        // Fetch channel profile and send to client
+        // Immediately fetch the channel profile on actor creation
+        fetchChannelProfile();
+    }
+
+    /**
+     * Fetches the channel profile and latest videos, and sends the data to the client.
+     */
+    private void fetchChannelProfile() {
         try {
             Channel channel = youTubeService.getChannelProfile(channelId);
             List<VideoResult> latestVideos = youTubeService.getLatestVideosByChannel(channelId, 10);
 
-            ChannelProfileData data = new ChannelProfileData(channel, latestVideos);
-            out.tell(Json.toJson(data).toString(), self());
-        } catch (Exception e) {
-            out.tell(Json.newObject().put("error", "Unable to fetch channel information").toString(), self());
+            ObjectNode response = Json.newObject();
+            response.set("channel", Json.toJson(channel));
+            response.set("videos", Json.toJson(latestVideos));
+
+            out.tell(response.toString(), self());
+        } catch (IOException e) {
+            sendErrorResponse("Unable to fetch channel information: " + e.getMessage());
         }
     }
 
     /**
-     * Creates the message handling behavior for the actor.
+     * Sends an error response to the client.
      *
-     * @return The Receive object defining the message handling behavior.
+     * @param message The error message to send.
      */
+    private void sendErrorResponse(String message) {
+        out.tell(Json.newObject().put("error", message).toString(), self());
+    }
+
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .matchEquals("fetchChannelProfile", msg -> {
-                    try {
-                        // Fetch channel profile data
-                        Channel channel = youTubeService.getChannelProfile(channelId);
-                        List<VideoResult> videos = youTubeService.getLast10Videos(channelId);
-
-                        // Combine profile and videos into a single JSON response
-                        ObjectNode response = Json.newObject();
-                        response.set("channel", Json.toJson(channel));
-                        response.set("videos", Json.toJson(videos));
-
-                        out.tell(response, self());
-                    } catch (Exception e) {
-                        out.tell(Json.newObject().put("error", e.getMessage()), self());
-                    }
-                })
+                .matchEquals("fetchChannelProfile", msg -> fetchChannelProfile())
                 .build();
-    }
-
-    /**
-     * Helper class to encapsulate channel profile data.
-     * Used for sending channel information and the latest videos to the client.
-     */
-    public static class ChannelProfileData {
-        public Channel channel;
-        public List<VideoResult> latestVideos;
-
-        /**
-         * Constructor for ChannelProfileData.
-         *
-         * @param channel      The channel information.
-         * @param latestVideos The list of the latest videos for the channel.
-         */
-        public ChannelProfileData(Channel channel, List<VideoResult> latestVideos) {
-            this.channel = channel;
-            this.latestVideos = latestVideos;
-        }
     }
 }

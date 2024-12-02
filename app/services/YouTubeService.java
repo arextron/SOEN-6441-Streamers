@@ -17,22 +17,32 @@ import java.util.stream.Collectors;
  */
 public class YouTubeService {
 
-    private static final String API_KEY = "AIzaSyAe7aBw3usdV4b3GaCvO23BBkXog7ro-aU"; // Replace with your actual API key
+    private static final String API_KEY = "AIzaSyBTIpHIbq_TpejUrJI55qM8qKasiLJYRxo"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
 
+
     /**
-     * Initializes the YouTube API client.
-     * Configures the YouTube client with default settings and application name.
+     * Constructor for dependency injection, primarily used for testing with a mocked YouTube client.
+     *
+     * @param youtube The YouTube client to use.
+     */
+    public YouTubeService(YouTube youtube) {
+        this.youtube = youtube;
+    }
+
+
+    /**
+     * Initializes the YouTubeService with a new YouTube client.
      */
     public YouTubeService() {
         try {
-            youtube = new YouTube.Builder(
+            this.youtube = new YouTube.Builder(
                     GoogleNetHttpTransport.newTrustedTransport(),
                     JacksonFactory.getDefaultInstance(),
                     null
-            ).setApplicationName(APPLICATION_NAME).build();
+            ).setApplicationName("TubeLytics").build();
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize YouTube client", e);
         }
@@ -68,6 +78,7 @@ public class YouTubeService {
                 ))
                 .collect(Collectors.toList());
     }
+
 
     /**
      * Fetches the profile of a given channel.

@@ -61,6 +61,7 @@ public class HomeController extends Controller {
         this.actorSystem = actorSystem;
         this.materializer = materializer;
     }
+
     public WebSocket searchWebSocket() {
         return WebSocket.Text.accept(request -> {
             return ActorFlow.actorRef(
