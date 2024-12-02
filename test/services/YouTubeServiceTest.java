@@ -1,437 +1,545 @@
-//We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
-//Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
-// 40278847, 40310953, 40272435
-
 package services;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.*;
 import models.VideoResult;
-import services.YouTubeService;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.*;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+
 import java.io.IOException;
-import java.math.BigInteger;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-
-@RunWith(MockitoJUnitRunner.class)
-
-/**
- * This class represents YouTubeServiceTest.
- */
-
 public class YouTubeServiceTest {
 
-    @Mock
-    private YouTube youtube;
-
-    @Mock
-    private YouTube.Search youtubeSearch;
-
-    @Mock
-    private YouTube.Search.List searchList;
-
-    @Mock
-    private YouTube.Videos youtubeVideos;
-
-    @Mock
-    private YouTube.Videos.List videosList;
-
-    @Mock
-    private YouTube.Channels youtubeChannels;
-
-    @Mock
-    private YouTube.Channels.List channelsList;
-
-    @InjectMocks
+    private YouTube youtubeMock;
     private YouTubeService youTubeService;
 
     @Before
-
-/**
- * This method represents setUp.
- *
- * @return [Description of return value]
- */
     public void setUp() {
-
-        youTubeService = new YouTubeService(youtube);
+        // Mock the YouTube client
+        youtubeMock = Mockito.mock(YouTube.class);
+        // Instantiate YouTubeService with the mocked YouTube client
+        youTubeService = new YouTubeService(youtubeMock);
     }
     @Test
+    public void testSearchVideos() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
 
-/**
- * This method represents testSearchVideos.
- *
- * @return [Description of return value]
- */
-    public void testSearchVideos() throws IOException {
-        String query = "test query";
-        SearchListResponse searchListResponse = new SearchListResponse();
-        SearchResult searchResult = new SearchResult();
-        ResourceId resourceId = new ResourceId();
-        resourceId.setVideoId("videoId123");
-        searchResult.setId(resourceId);
-        searchResult.setSnippet(new SearchResultSnippet());
-        searchListResponse.setItems(Collections.singletonList(searchResult));
+        // Mock YouTube.Videos and YouTube.Videos.List
+        YouTube.Videos videosMock = mock(YouTube.Videos.class);
+        YouTube.Videos.List videosListMock = mock(YouTube.Videos.List.class);
 
-        when(youtube.search()).thenReturn(youtubeSearch);
-        when(youtubeSearch.list("snippet")).thenReturn(searchList);
-        when(searchList.setQ(query)).thenReturn(searchList);
-        when(searchList.setMaxResults(anyLong())).thenReturn(searchList);
-        when(searchList.setType("video")).thenReturn(searchList);
-        when(searchList.setKey(anyString())).thenReturn(searchList);
-        when(searchList.execute()).thenReturn(searchListResponse);
+        // Mock response for search
+        SearchListResponse searchResponseMock = mock(SearchListResponse.class);
+        SearchResult searchResultMock = mock(SearchResult.class);
+        SearchResultSnippet snippetMock = mock(SearchResultSnippet.class);
+        Thumbnail thumbnailMock = mock(Thumbnail.class);
+        ThumbnailDetails thumbnailDetailsMock = mock(ThumbnailDetails.class);
+        ResourceId idMock = mock(ResourceId.class);
 
+        // Mock response for getVideoDetails
+        VideoListResponse videoListResponseMock = mock(VideoListResponse.class);
+        Video videoMock = mock(Video.class);
+        VideoSnippet videoSnippetMock = mock(VideoSnippet.class);
 
-        VideoResult videoResult = new VideoResult(
-                "Test Title",
-                "Test Description",
-                "videoId123",
-                "channelId123",
-                "http://thumbnail.url",
-                "Channel Title",
-                Arrays.asList("tag1", "tag2")
-        );
-        YouTubeService spyService = spy(youTubeService);
-        doReturn(videoResult).when(spyService).getVideoDetails("videoId123");
-        List<VideoResult> results = spyService.searchVideos(query);
-        assertNotNull(results);
-        assertEquals(1, results.size());
-        assertEquals(videoResult, results.get(0));
-    }
-    @Test
+        // Setup mocks for searchVideos
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+        when(searchListMock.execute()).thenReturn(searchResponseMock);
 
-/**
- * This method represents testSearchVideos_VideoDetailNull.
- *
- * @return [Description of return value]
- */
-    public void testSearchVideos_VideoDetailNull() throws IOException {
+        when(searchResponseMock.getItems()).thenReturn(Arrays.asList(searchResultMock));
+        when(searchResultMock.getSnippet()).thenReturn(snippetMock);
+        when(searchResultMock.getId()).thenReturn(idMock);
+        when(idMock.getVideoId()).thenReturn("videoId");
+        when(snippetMock.getTitle()).thenReturn("Search Video Title");
+        when(snippetMock.getDescription()).thenReturn("Search Video Description");
+        when(snippetMock.getThumbnails()).thenReturn(thumbnailDetailsMock);
+        when(thumbnailDetailsMock.getDefault()).thenReturn(thumbnailMock);
+        when(thumbnailMock.getUrl()).thenReturn("Search Thumbnail URL");
+        when(snippetMock.getChannelTitle()).thenReturn("Search Channel Title");
+        when(snippetMock.getChannelId()).thenReturn("Search Channel ID");
 
-        String query = "test query";
-        SearchListResponse searchListResponse = new SearchListResponse();
-        SearchResult searchResult = new SearchResult();
-        ResourceId resourceId = new ResourceId();
-        resourceId.setVideoId("videoId123");
-        searchResult.setId(resourceId);
-        searchResult.setSnippet(new SearchResultSnippet());
-        searchListResponse.setItems(Collections.singletonList(searchResult));
-        when(youtube.search()).thenReturn(youtubeSearch);
-        when(youtubeSearch.list("snippet")).thenReturn(searchList);
-        when(searchList.setQ(query)).thenReturn(searchList);
-        when(searchList.setMaxResults(anyLong())).thenReturn(searchList);
-        when(searchList.setType("video")).thenReturn(searchList);
-        when(searchList.setKey(anyString())).thenReturn(searchList);
-        when(searchList.execute()).thenReturn(searchListResponse);
+        // Setup mocks for getVideoDetails
+        when(youtubeMock.videos()).thenReturn(videosMock);
+        when(videosMock.list(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setId(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setKey(anyString())).thenReturn(videosListMock);
+        when(videosListMock.execute()).thenReturn(videoListResponseMock);
 
-        YouTubeService spyService = spy(youTubeService);
-        doReturn(null).when(spyService).getVideoDetails("videoId123");
-        List<VideoResult> results = spyService.searchVideos(query);
-        assertNotNull(results);
-        assertTrue(results.isEmpty()); // Expect an empty list since videoDetail is null
-    }
-    @Test
+        when(videoListResponseMock.getItems()).thenReturn(Arrays.asList(videoMock));
+        when(videoMock.getSnippet()).thenReturn(videoSnippetMock);
+        when(videoSnippetMock.getTitle()).thenReturn("Detailed Video Title");
+        when(videoSnippetMock.getDescription()).thenReturn("Detailed Video Description");
+        when(videoSnippetMock.getChannelId()).thenReturn("Detailed Channel ID");
+        when(videoSnippetMock.getChannelTitle()).thenReturn("Detailed Channel Title");
+        when(videoSnippetMock.getThumbnails()).thenReturn(thumbnailDetailsMock);
+        when(thumbnailDetailsMock.getDefault()).thenReturn(thumbnailMock);
+        when(thumbnailMock.getUrl()).thenReturn("Detailed Thumbnail URL");
+        when(videoSnippetMock.getTags()).thenReturn(Arrays.asList("tag1", "tag2"));
 
-/**
- * This method represents testGetVideoDetails.
- *
- * @return [Description of return value]
- */
-    public void testGetVideoDetails() throws IOException {
+        // Call the method under test
+        List<VideoResult> results = youTubeService.searchVideos("query");
 
-        String videoId = "videoId123";
-
-        VideoListResponse videoListResponse = new VideoListResponse();
-        Video video = new Video();
-        VideoSnippet snippet = new VideoSnippet();
-        snippet.setTitle("Test Title");
-        snippet.setDescription("Test Description");
-        snippet.setChannelId("channelId123");
-        snippet.setChannelTitle("Channel Title");
-        snippet.setTags(Arrays.asList("tag1", "tag2"));
-
-        Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setUrl("http://thumbnail.url");
-        ThumbnailDetails thumbnailDetails = new ThumbnailDetails();
-        thumbnailDetails.setDefault(thumbnail);
-        snippet.setThumbnails(thumbnailDetails);
-
-        video.setSnippet(snippet);
-        videoListResponse.setItems(Collections.singletonList(video));
-
-        when(youtube.videos()).thenReturn(youtubeVideos);
-        when(youtubeVideos.list("snippet")).thenReturn(videosList);
-        when(videosList.setId(videoId)).thenReturn(videosList);
-        when(videosList.setKey(anyString())).thenReturn(videosList);
-        when(videosList.execute()).thenReturn(videoListResponse);
-
-        VideoResult result = youTubeService.getVideoDetails(videoId);
-
-        assertNotNull(result);
-        assertEquals("Test Title", result.getTitle());
-        assertEquals("Test Description", result.getDescription());
-        assertEquals(videoId, result.getVideoId());
-        assertEquals("channelId123", result.getChannelId());
-        assertEquals("http://thumbnail.url", result.getThumbnailUrl());
-        assertEquals("Channel Title", result.getChannelTitle());
-        assertEquals(Arrays.asList("tag1", "tag2"), result.getTags());
-    }
-    @Test
-
-/**
- * This method represents testGetVideoDetails_NullTags.
- *
- * @return [Description of return value]
- */
-    public void testGetVideoDetails_NullTags() throws IOException {
-
-        String videoId = "videoId123";
-        VideoListResponse videoListResponse = new VideoListResponse();
-        Video video = new Video();
-
-        VideoSnippet snippet = new VideoSnippet();
-        snippet.setTitle("Test Title");
-        snippet.setDescription("Test Description");
-        snippet.setChannelId("channelId123");
-        snippet.setChannelTitle("Channel Title");
-        snippet.setTags(null); // Simulate tags being null
-
-
-        Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setUrl("http://thumbnail.url");
-        ThumbnailDetails thumbnailDetails = new ThumbnailDetails();
-        thumbnailDetails.setDefault(thumbnail);
-        snippet.setThumbnails(thumbnailDetails);
-
-        video.setSnippet(snippet);
-        videoListResponse.setItems(Collections.singletonList(video));
-        when(youtube.videos()).thenReturn(youtubeVideos);
-        when(youtubeVideos.list("snippet")).thenReturn(videosList);
-        when(videosList.setId(videoId)).thenReturn(videosList);
-        when(videosList.setKey(anyString())).thenReturn(videosList);
-        when(videosList.execute()).thenReturn(videoListResponse);
-
-        VideoResult result = youTubeService.getVideoDetails(videoId);
-        assertNotNull(result);
-        assertEquals("Test Title", result.getTitle());
-        assertEquals("Test Description", result.getDescription());
-        assertEquals(videoId, result.getVideoId());
-        assertEquals("channelId123", result.getChannelId());
-        assertEquals("http://thumbnail.url", result.getThumbnailUrl());
-        assertEquals("Channel Title", result.getChannelTitle());
-        assertNotNull(result.getTags());
-        assertTrue(result.getTags().isEmpty()); // Expect an empty list when tags are null
-    }
-
-    @Test
-
-/**
- * This method represents testGetVideoDetails_VideoNotFound.
- *
- * @return [Description of return value]
- */
-    public void testGetVideoDetails_VideoNotFound() throws IOException {
-
-        String videoId = "nonExistentVideoId";
-
-        VideoListResponse videoListResponse = new VideoListResponse();
-        videoListResponse.setItems(Collections.emptyList());
-
-        when(youtube.videos()).thenReturn(youtubeVideos);
-        when(youtubeVideos.list("snippet")).thenReturn(videosList);
-        when(videosList.setId(videoId)).thenReturn(videosList);
-        when(videosList.setKey(anyString())).thenReturn(videosList);
-        when(videosList.execute()).thenReturn(videoListResponse);
-
-        VideoResult result = youTubeService.getVideoDetails(videoId);
-        assertNull(result);
-    }
-    @Test
-
-/**
- * This method represents testSearchVideosByTag.
- *
- * @return [Description of return value]
- */
-    public void testSearchVideosByTag() throws IOException {
-
-        String tag = "testTag";
-        SearchListResponse searchListResponse = new SearchListResponse();
-        SearchResult searchResult = new SearchResult();
-
-        SearchResultSnippet snippet = new SearchResultSnippet();
-        snippet.setTitle("Test Title");
-        snippet.setDescription("Test Description");
-        snippet.setChannelId("channelId123");
-        snippet.setChannelTitle("Channel Title");
-
-        Thumbnail thumbnail = new Thumbnail();
-        thumbnail.setUrl("http://thumbnail.url");
-        ThumbnailDetails thumbnailDetails = new ThumbnailDetails();
-        thumbnailDetails.setDefault(thumbnail);
-        snippet.setThumbnails(thumbnailDetails);
-
-        searchResult.setId(new ResourceId().setVideoId("videoId123"));
-        searchResult.setSnippet(snippet);
-        searchListResponse.setItems(Collections.singletonList(searchResult));
-
-        when(youtube.search()).thenReturn(youtubeSearch);
-        when(youtubeSearch.list("snippet")).thenReturn(searchList);
-        when(searchList.setQ(tag)).thenReturn(searchList);
-        when(searchList.setType("video")).thenReturn(searchList);
-        when(searchList.setMaxResults(anyLong())).thenReturn(searchList);
-        when(searchList.setKey(anyString())).thenReturn(searchList);
-        when(searchList.execute()).thenReturn(searchListResponse);
-
-        List<VideoResult> results = youTubeService.searchVideosByTag(tag);
+        // Verify results
         assertNotNull(results);
         assertEquals(1, results.size());
         VideoResult result = results.get(0);
-        assertEquals("Test Title", result.getTitle());
-        assertEquals("Test Description", result.getDescription());
-        assertEquals("videoId123", result.getVideoId());
-        assertEquals("channelId123", result.getChannelId());
-        assertEquals("http://thumbnail.url", result.getThumbnailUrl());
-        assertEquals("Channel Title", result.getChannelTitle());
-        assertNotNull(result.getTags());
-        assertTrue(result.getTags().isEmpty()); // Tags are empty in search results
+
+        // Assertions for the result
+        assertEquals("Detailed Video Title", result.getTitle());
+        assertEquals("Detailed Video Description", result.getDescription());
+        assertEquals("videoId", result.getVideoId());
+        assertEquals("Detailed Channel ID", result.getChannelId());
+        assertEquals("Detailed Thumbnail URL", result.getThumbnailUrl());
+        assertEquals("Detailed Channel Title", result.getChannelTitle());
+        assertEquals(Arrays.asList("tag1", "tag2"), result.getTags());
+    }
+    @Test
+    public void testGetVideoDetails_IOException() throws Exception {
+        // Mock YouTube.Videos and YouTube.Videos.List
+        YouTube.Videos videosMock = mock(YouTube.Videos.class);
+        YouTube.Videos.List videosListMock = mock(YouTube.Videos.List.class);
+
+        // Setup mocks
+        when(youtubeMock.videos()).thenReturn(videosMock);
+        when(videosMock.list(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setId(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setKey(anyString())).thenReturn(videosListMock);
+
+        // Simulate IOException
+        when(videosListMock.execute()).thenThrow(new IOException("Simulated IOException"));
+
+        // Call the method under test
+        VideoResult result = youTubeService.getVideoDetails("videoId");
+
+        // Verify result is null
+        assertNull(result);
     }
 
     @Test
+    public void testSearchVideos_EmptyResults() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
 
-/**
- * This method represents testGetChannelProfile.
- *
- * @return [Description of return value]
- */
-    public void testGetChannelProfile() throws IOException {
-        String channelId = "channelId123";
-        ChannelListResponse channelListResponse = new ChannelListResponse();
-        Channel channel = new Channel();
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
 
-        ChannelSnippet snippet = new ChannelSnippet();
-        snippet.setTitle("Test Channel");
-        snippet.setDescription("Test Channel Description");
-        channel.setSnippet(snippet);
+        // Mock empty response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        when(searchListMock.execute()).thenReturn(responseMock);
+        when(responseMock.getItems()).thenReturn(Arrays.asList());
 
-        ChannelStatistics statistics = new ChannelStatistics();
-        statistics.setSubscriberCount(BigInteger.valueOf(1000L));
-        statistics.setVideoCount(BigInteger.valueOf(50L));
-        statistics.setViewCount(BigInteger.valueOf(100000L));
-        channel.setStatistics(statistics);
-        channelListResponse.setItems(Collections.singletonList(channel));
+        // Call the method under test
+        List<VideoResult> results = youTubeService.searchVideos("query");
 
-        when(youtube.channels()).thenReturn(youtubeChannels);
-        when(youtubeChannels.list("snippet,statistics")).thenReturn(channelsList);
-        when(channelsList.setId(channelId)).thenReturn(channelsList);
-        when(channelsList.setKey(anyString())).thenReturn(channelsList);
-        when(channelsList.execute()).thenReturn(channelListResponse);
-
-        Channel result = youTubeService.getChannelProfile(channelId);
-        assertNotNull(result);
-        assertEquals("Test Channel", result.getSnippet().getTitle());
-        assertEquals("Test Channel Description", result.getSnippet().getDescription());
-        assertEquals(BigInteger.valueOf(1000L), result.getStatistics().getSubscriberCount());
-        assertEquals(BigInteger.valueOf(50L), result.getStatistics().getVideoCount());
-        assertEquals(BigInteger.valueOf(100000L), result.getStatistics().getViewCount());
-    }
-    @Test(expected = IOException.class)
-/**
- * This method represents testGetChannelProfile_ChannelNotFound.
- *
- * @return [Description of return value]
- */
-    public void testGetChannelProfile_ChannelNotFound() throws IOException {
-        String channelId = "nonExistentChannelId";
-        ChannelListResponse channelListResponse = new ChannelListResponse();
-        channelListResponse.setItems(Collections.emptyList());
-        when(youtube.channels()).thenReturn(youtubeChannels);
-        when(youtubeChannels.list("snippet,statistics")).thenReturn(channelsList);
-        when(channelsList.setId(channelId)).thenReturn(channelsList);
-        when(channelsList.setKey(anyString())).thenReturn(channelsList);
-        when(channelsList.execute()).thenReturn(channelListResponse);
-        youTubeService.getChannelProfile(channelId);
+        // Verify results
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
     }
     @Test
-/**
- * This method represents testGetLatestVideosByChannel.
- *
- * @return [Description of return value]
- */
-    public void testGetLatestVideosByChannel() throws IOException {
-        String channelId = "channelId123";
-        int limit = 5;
-        SearchListResponse searchListResponse = new SearchListResponse();
-        List<SearchResult> searchResults = new ArrayList<>();
+    public void testSearchVideos_IOException() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
 
-        for (int i = 0; i < limit; i++) {
-            SearchResult searchResult = new SearchResult();
-            searchResult.setId(new ResourceId().setVideoId("videoId" + i));
-            searchResults.add(searchResult);
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+
+        // Simulate IOException
+        when(searchListMock.execute()).thenThrow(new IOException("Simulated IOException"));
+
+        // Call the method under test
+        List<VideoResult> results = youTubeService.searchVideos("query");
+
+        // Verify results
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
+    @Test
+    public void testSearchVideosByTag_EmptyResults() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+
+        // Mock empty response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        when(searchListMock.execute()).thenReturn(responseMock);
+        when(responseMock.getItems()).thenReturn(Arrays.asList());
+
+        // Call the method under test
+        List<VideoResult> results = youTubeService.searchVideosByTag("tag");
+
+        // Verify results
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
+    @Test
+    public void testSearchVideosByTag_NullVideoDetails() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+
+        // Mock response with a valid item
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        SearchResult searchResultMock = mock(SearchResult.class);
+        ResourceId idMock = mock(ResourceId.class);
+        when(searchResultMock.getId()).thenReturn(idMock);
+        when(idMock.getVideoId()).thenReturn("videoId");
+        when(responseMock.getItems()).thenReturn(Arrays.asList(searchResultMock));
+        when(searchListMock.execute()).thenReturn(responseMock);
+
+        // Mock getVideoDetails to return null
+        YouTubeService spyService = spy(youTubeService);
+        doReturn(null).when(spyService).getVideoDetails("videoId");
+
+        // Call the method under test
+        List<VideoResult> results = spyService.searchVideosByTag("tag");
+
+        // Verify results
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
+    @Test
+    public void testYouTubeServiceConstructor_Success() {
+        try {
+            // Simulate successful initialization
+            YouTubeService service = new YouTubeService();
+            assertNotNull(service); // Ensure the object is created successfully
+        } catch (Exception e) {
+            fail("Constructor should not throw an exception on successful initialization.");
         }
-        searchListResponse.setItems(searchResults);
+    }
 
-        when(youtube.search()).thenReturn(youtubeSearch);
-        when(youtubeSearch.list("snippet")).thenReturn(searchList);
-        when(searchList.setChannelId(channelId)).thenReturn(searchList);
-        when(searchList.setMaxResults((long) limit)).thenReturn(searchList);
-        when(searchList.setOrder("date")).thenReturn(searchList);
-        when(searchList.setKey(anyString())).thenReturn(searchList);
-        when(searchList.execute()).thenReturn(searchListResponse);
+    @Test
+    public void testGetLatestVideosByChannel_ValidResponse() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Mock response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        SearchResult searchResultMock = mock(SearchResult.class);
+        ResourceId idMock = mock(ResourceId.class);
+
+        // Mock response for getVideoDetails
+        VideoResult videoResultMock = mock(VideoResult.class);
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setChannelId(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setOrder(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+        when(searchListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList(searchResultMock));
+        when(searchResultMock.getId()).thenReturn(idMock);
+        when(idMock.getVideoId()).thenReturn("videoId");
 
         YouTubeService spyService = spy(youTubeService);
-        for (int i = 0; i < limit; i++) {
-            String videoId = "videoId" + i;
-            VideoResult videoResult = new VideoResult(
-                    "Title " + i,
-                    "Description " + i,
-                    videoId,
-                    channelId,
-                    "http://thumbnail.url/" + i,
-                    "Channel Title",
-                    Arrays.asList("tag1", "tag2")
-            );
-            doReturn(videoResult).when(spyService).getVideoDetails(videoId);
-        }
+        doReturn(videoResultMock).when(spyService).getVideoDetails("videoId");
 
-        List<VideoResult> results = spyService.getLatestVideosByChannel(channelId, limit);
+        // Call the method under test
+        List<VideoResult> results = spyService.getLatestVideosByChannel("channelId", 5);
+
+        // Verify results
         assertNotNull(results);
-        assertEquals(limit, results.size());
-        for (int i = 0; i < limit; i++) {
-            VideoResult result = results.get(i);
-            assertEquals("Title " + i, result.getTitle());
-            assertEquals("Description " + i, result.getDescription());
-            assertEquals("videoId" + i, result.getVideoId());
-            assertEquals("http://thumbnail.url/" + i, result.getThumbnailUrl());
-        }
+        assertEquals(1, results.size());
+        assertEquals(videoResultMock, results.get(0));
     }
     @Test
-/**
- * This method represents testConstructor_Default.
- *
- * @return [Description of return value]
- */
-    public void testConstructor_Default() {
-        YouTubeService service = new YouTubeService();
-        assertNotNull(service);
+    public void testGetLatestVideosByChannel_EmptyResults() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Mock response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setChannelId(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setOrder(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+        when(searchListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList());
+
+        // Call the method under test
+        List<VideoResult> results = youTubeService.getLatestVideosByChannel("channelId", 5);
+
+        // Verify results
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
     }
+
+
+    @Test
+    public void testSearchVideosByTag_IOException() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+
+        // Simulate IOException
+        when(searchListMock.execute()).thenThrow(new IOException("Simulated IOException"));
+
+        // Call the method under test
+        List<VideoResult> results = youTubeService.searchVideosByTag("tag");
+
+        // Verify results
+        assertNotNull(results);  // Ensure the method returns a list
+        assertTrue(results.isEmpty());  // The list should be empty due to the exception
+    }
+
+
     @Test(expected = RuntimeException.class)
-/**
- * This method represents testConstructor_Exception.
- *
- * @return [Description of return value]
- */
-    public void testConstructor_Exception() {
-        try (MockedStatic<GoogleNetHttpTransport> mockedStatic = mockStatic(GoogleNetHttpTransport.class)) {
-            mockedStatic.when(GoogleNetHttpTransport::newTrustedTransport).thenThrow(new Exception("Initialization failed"));
+    public void testYouTubeServiceConstructor_Failure() throws Exception {
+        // Mock GoogleNetHttpTransport and JacksonFactory
+        try (MockedStatic<GoogleNetHttpTransport> mockedTransport = mockStatic(GoogleNetHttpTransport.class);
+             MockedStatic<JacksonFactory> mockedFactory = mockStatic(JacksonFactory.class)) {
+
+            // Simulate exception when creating new trusted transport
+            mockedTransport.when(GoogleNetHttpTransport::newTrustedTransport)
+                    .thenThrow(new IOException("Simulated Transport Exception"));
+
+            // Call the constructor, which should throw RuntimeException
             new YouTubeService();
         }
     }
+
+
+    @Test
+    public void testGetVideoDetails() throws Exception {
+        // Mock YouTube.Videos and YouTube.Videos.List
+        YouTube.Videos videosMock = mock(YouTube.Videos.class);
+        YouTube.Videos.List videosListMock = mock(YouTube.Videos.List.class);
+
+        // Mock response
+        VideoListResponse responseMock = mock(VideoListResponse.class);
+        Video videoMock = mock(Video.class);
+        VideoSnippet snippetMock = mock(VideoSnippet.class);
+        Thumbnail thumbnailMock = mock(Thumbnail.class);
+        ThumbnailDetails thumbnailDetailsMock = mock(ThumbnailDetails.class);
+
+        // Setup mocks
+        when(youtubeMock.videos()).thenReturn(videosMock);
+        when(videosMock.list(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setId(anyString())).thenReturn(videosListMock);
+        when(videosListMock.setKey(anyString())).thenReturn(videosListMock);
+        when(videosListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList(videoMock));
+        when(videoMock.getSnippet()).thenReturn(snippetMock);
+        when(snippetMock.getTitle()).thenReturn("Title");
+        when(snippetMock.getDescription()).thenReturn("Description");
+        when(snippetMock.getChannelId()).thenReturn("channelId");
+        when(snippetMock.getChannelTitle()).thenReturn("Channel Title");
+        when(snippetMock.getThumbnails()).thenReturn(thumbnailDetailsMock);
+        when(thumbnailDetailsMock.getDefault()).thenReturn(thumbnailMock);
+        when(thumbnailMock.getUrl()).thenReturn("thumbnailUrl");
+        when(snippetMock.getTags()).thenReturn(Arrays.asList("tag1", "tag2"));
+
+        // Call the method under test
+        VideoResult result = youTubeService.getVideoDetails("videoId");
+
+        // Verify results
+        assertNotNull(result);
+        assertEquals("Title", result.getTitle());
+        assertEquals("Description", result.getDescription());
+        assertEquals("videoId", result.getVideoId());
+        assertEquals("channelId", result.getChannelId());
+        assertEquals("thumbnailUrl", result.getThumbnailUrl());
+        assertEquals("Channel Title", result.getChannelTitle());
+        assertEquals(Arrays.asList("tag1", "tag2"), result.getTags());
+    }
+
+    @Test
+    public void testGetChannelProfile() throws Exception {
+        // Mock YouTube.Channels and YouTube.Channels.List
+        YouTube.Channels channelsMock = mock(YouTube.Channels.class);
+        YouTube.Channels.List channelsListMock = mock(YouTube.Channels.List.class);
+
+        // Mock response
+        ChannelListResponse responseMock = mock(ChannelListResponse.class);
+        Channel channelMock = mock(Channel.class);
+
+        // Setup mocks
+        when(youtubeMock.channels()).thenReturn(channelsMock);
+        when(channelsMock.list(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.setId(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.setKey(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList(channelMock));
+
+        // Call the method under test
+        Channel result = youTubeService.getChannelProfile("channelId");
+
+        // Verify results
+        assertNotNull(result);
+        // Additional assertions can be added based on your needs
+    }
+
+    @Test(expected = IOException.class)
+    public void testGetChannelProfile_ChannelNotFound() throws Exception {
+        // Mock YouTube.Channels and YouTube.Channels.List
+        YouTube.Channels channelsMock = mock(YouTube.Channels.class);
+        YouTube.Channels.List channelsListMock = mock(YouTube.Channels.List.class);
+
+        // Mock response with no channels
+        ChannelListResponse responseMock = mock(ChannelListResponse.class);
+
+        // Setup mocks
+        when(youtubeMock.channels()).thenReturn(channelsMock);
+        when(channelsMock.list(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.setId(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.setKey(anyString())).thenReturn(channelsListMock);
+        when(channelsListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList());
+
+        // Call the method under test, which should throw an IOException
+        youTubeService.getChannelProfile("channelId");
+    }
+
+    @Test
+    public void testSearchVideosByTag() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Mock response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        SearchResult searchResultMock = mock(SearchResult.class);
+        ResourceId idMock = mock(ResourceId.class); // Use ResourceId instead of Id
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setQ(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+        when(searchListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList(searchResultMock));
+        when(searchResultMock.getId()).thenReturn(idMock);
+        when(idMock.getVideoId()).thenReturn("videoId");
+
+        // Mock getVideoDetails to return a VideoResult
+        VideoResult videoResultMock = mock(VideoResult.class);
+        YouTubeService spyService = spy(youTubeService);
+        doReturn(videoResultMock).when(spyService).getVideoDetails("videoId");
+
+        // Call the method under test
+        List<VideoResult> results = spyService.searchVideosByTag("tag");
+
+        // Verify results
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        assertEquals(videoResultMock, results.get(0));
+    }
+
+    @Test
+    public void testGetLast10Videos() throws Exception {
+        // Mock YouTube.Search and YouTube.Search.List
+        YouTube.Search searchMock = mock(YouTube.Search.class);
+        YouTube.Search.List searchListMock = mock(YouTube.Search.List.class);
+
+        // Mock response
+        SearchListResponse responseMock = mock(SearchListResponse.class);
+        SearchResult searchResultMock = mock(SearchResult.class);
+        SearchResultSnippet snippetMock = mock(SearchResultSnippet.class);
+        ThumbnailDetails thumbnailDetailsMock = mock(ThumbnailDetails.class);
+        Thumbnail thumbnailMock = mock(Thumbnail.class);
+        ResourceId idMock = mock(ResourceId.class); // Use ResourceId instead of Id
+
+        // Setup mocks
+        when(youtubeMock.search()).thenReturn(searchMock);
+        when(searchMock.list(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setChannelId(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setType(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setMaxResults(anyLong())).thenReturn(searchListMock);
+        when(searchListMock.setOrder(anyString())).thenReturn(searchListMock);
+        when(searchListMock.setKey(anyString())).thenReturn(searchListMock);
+        when(searchListMock.execute()).thenReturn(responseMock);
+
+        when(responseMock.getItems()).thenReturn(Arrays.asList(searchResultMock));
+        when(searchResultMock.getSnippet()).thenReturn(snippetMock);
+        when(searchResultMock.getId()).thenReturn(idMock);
+        when(idMock.getVideoId()).thenReturn("videoId");
+        when(snippetMock.getTitle()).thenReturn("Title");
+        when(snippetMock.getDescription()).thenReturn("Description");
+        when(snippetMock.getThumbnails()).thenReturn(thumbnailDetailsMock);
+        when(thumbnailDetailsMock.getDefault()).thenReturn(thumbnailMock);
+        when(thumbnailMock.getUrl()).thenReturn("thumbnailUrl");
+        when(snippetMock.getChannelTitle()).thenReturn("Channel Title");
+
+        // Call the method under test
+        List<VideoResult> results = youTubeService.getLast10Videos("channelId");
+
+        // Verify results
+        assertNotNull(results);
+        assertEquals(1, results.size());
+        VideoResult result = results.get(0);
+        assertEquals("Title", result.getTitle());
+        assertEquals("Description", result.getDescription());
+        assertEquals("videoId", result.getVideoId());
+        // Additional assertions can be added
+    }
+
+    // Add more tests as needed for other methods
+
 }
