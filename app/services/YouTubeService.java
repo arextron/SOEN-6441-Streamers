@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  * Service class for interacting with the YouTube API.
  */
 public class YouTubeService {
-    private static final String API_KEY = "AIzaSyCmqUHNCYAyQH9z4bj50fZY7BjM3WjYE00"; // Replace with your actual API key
+    private static final String API_KEY = "AIzaSyCoVo9kQcHkMUujul389tJcMh2lEld8kN4"; // Replace with your actual API key
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;
