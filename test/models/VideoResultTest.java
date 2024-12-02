@@ -2,7 +2,7 @@
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
 
-package controllers;
+package models;
 
 import models.VideoResult;
 import org.junit.Test;

@@ -2,7 +2,7 @@
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
 
-package controllers;
+package services;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.services.youtube.YouTube;

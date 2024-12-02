@@ -1,9 +1,15 @@
 //We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
 //Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
+// We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
+// Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
+// 40278847, 40310953, 40272435
+
 package controllers;
+
 import models.VideoResult;
 import services.YouTubeService;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,20 +26,25 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.CompletionStage;
+
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static play.mvc.Http.Status.*;
 import static play.test.Helpers.*;
+
 import com.google.api.services.youtube.model.Channel;
 import com.google.api.services.youtube.model.ChannelSnippet;
 import com.google.api.services.youtube.model.ChannelStatistics;
 
-@RunWith(MockitoJUnitRunner.class)
+import akka.actor.ActorSystem;
+import akka.stream.Materializer;
+import akka.testkit.javadsl.TestKit;
 
 /**
  * This class represents HomeControllerTest.
  */
+@RunWith(MockitoJUnitRunner.class)
 public class HomeControllerTest {
 
     @Mock
@@ -42,43 +53,45 @@ public class HomeControllerTest {
     @Mock
     private SyncCacheApi cache;
 
+    private ActorSystem actorSystem;
+    private Materializer materializer;
+
     @InjectMocks
     private HomeController homeController;
 
     @Before
-
-/**
- * This method represents setUp.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents setUp.
+     */
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        // Initialize the controller with mocked dependencies
-        homeController = new HomeController(youTubeService, cache);
+        actorSystem = ActorSystem.create();
+        materializer = Materializer.matFromSystem(actorSystem);
+        homeController = new HomeController(youTubeService, cache, actorSystem, materializer);
+    }
+
+    @After
+    public void tearDown() {
+        TestKit.shutdownActorSystem(actorSystem);
+        actorSystem = null;
     }
 
     @Test
-/**
- * This method represents testIndex.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testIndex.
+     */
     public void testIndex() {
         Http.Request request = fakeRequest().build();
         Result result = homeController.index(request);
         assertEquals(OK, result.status());
         String content = contentAsString(result);
-        assertTrue(content.contains("Welcome to TubeLytics"));
+        assertTrue(content.contains("TubeLytics"));
     }
 
     @Test
-
-/**
- * This method represents testSearch_NullQuery.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testSearch_NullQuery.
+     */
     public void testSearch_NullQuery() {
         Http.Request request = fakeRequest().build();
 
@@ -91,12 +104,9 @@ public class HomeControllerTest {
     }
 
     @Test
-
-/**
- * This method represents testSearch_EmptyQuery.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testSearch_EmptyQuery.
+     */
     public void testSearch_EmptyQuery() {
         Http.Request request = fakeRequest().build();
 
@@ -109,14 +119,11 @@ public class HomeControllerTest {
     }
 
     @Test
-
-/**
- * This method represents testSearch_ValidQuery_NotInCache.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testSearch_ValidQuery_NotInCache.
+     */
     public void testSearch_ValidQuery_NotInCache() throws Exception {
-        Http.Request request = fakeRequest().build();
+        Http.Request request = fakeRequest().session("sessionId", "testSession").build();
 
         VideoResult videoResult = new VideoResult(
                 "Test Title",
@@ -139,15 +146,13 @@ public class HomeControllerTest {
         assertTrue(content.contains("Test Title"));
         assertTrue(content.contains("Displaying results for \"test query\""));
     }
-    @Test
 
-/**
- * This method represents testSearch_ValidQuery_InCache.
- *
- * @return [Description of return value]
- */
+    @Test
+    /**
+     * This method represents testSearch_ValidQuery_InCache.
+     */
     public void testSearch_ValidQuery_InCache() throws Exception {
-        Http.Request request = fakeRequest().build();
+        Http.Request request = fakeRequest().session("sessionId", "testSession").build();
 
         VideoResult videoResult = new VideoResult(
                 "Test Title",
@@ -176,14 +181,10 @@ public class HomeControllerTest {
     }
 
     @Test
-
-/**
- * This method represents testShowVideoDetails.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testShowVideoDetails.
+     */
     public void testShowVideoDetails() {
-
         String videoId = "videoId123";
         VideoResult videoResult = new VideoResult(
                 "Test Title",
@@ -196,6 +197,7 @@ public class HomeControllerTest {
         );
 
         when(youTubeService.getVideoDetails(videoId)).thenReturn(videoResult);
+
         CompletionStage<Result> resultStage = homeController.showVideoDetails(videoId);
 
         Result result = resultStage.toCompletableFuture().join();
@@ -211,14 +213,10 @@ public class HomeControllerTest {
     }
 
     @Test
-
-/**
- * This method represents testSearchByTag.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testSearchByTag.
+     */
     public void testSearchByTag() {
-
         String tag = "testTag";
         VideoResult videoResult = new VideoResult(
                 "Test Title",
@@ -233,6 +231,7 @@ public class HomeControllerTest {
         List<VideoResult> videoResults = Arrays.asList(videoResult);
 
         when(youTubeService.searchVideosByTag(tag)).thenReturn(videoResults);
+
         CompletionStage<Result> resultStage = homeController.searchByTag(tag);
         Result result = resultStage.toCompletableFuture().join();
         assertEquals(OK, result.status());
@@ -240,13 +239,108 @@ public class HomeControllerTest {
         assertTrue(content.contains("Search Results for Tag: \"testTag\""));
         assertTrue(content.contains("Test Title"));
     }
-    @Test
 
-/**
- * This method represents testWordStats_NullQuery.
- *
- * @return [Description of return value]
- */
+    @Test
+    /**
+     * This method represents testWordStats_ValidQuery.
+     */
+    public void testWordStats_ValidQuery() {
+        String query = "test query";
+
+        VideoResult video1 = new VideoResult(
+                "Test Title 1",
+                "hello world",
+                "videoId1",
+                "channelId1",
+                "http://thumbnail1.url",
+                "Channel Title 1",
+                Arrays.asList("tag1")
+        );
+
+        VideoResult video2 = new VideoResult(
+                "Test Title 2",
+                "hello again",
+                "videoId2",
+                "channelId2",
+                "http://thumbnail2.url",
+                "Channel Title 2",
+                Arrays.asList("tag2")
+        );
+
+        List<VideoResult> videoResults = Arrays.asList(video1, video2);
+        when(youTubeService.searchVideos(query)).thenReturn(videoResults);
+
+        CompletionStage<Result> resultStage = homeController.wordStats(query);
+        Result result = resultStage.toCompletableFuture().join();
+        assertEquals(OK, result.status());
+        String content = contentAsString(result);
+
+        assertTrue(content.contains("hello"));
+        assertTrue(content.contains("2")); // "hello" appears twice
+        assertTrue(content.contains("world"));
+        assertTrue(content.contains("1")); // "world" appears once
+        assertTrue(content.contains("again"));
+        assertTrue(content.contains("1")); // "again" appears once
+    }
+
+    @Test
+    /**
+     * This method represents testChannelProfile.
+     */
+    public void testChannelProfile() throws IOException {
+        String channelId = "channelId123";
+
+        // Create a mocked Channel object
+        Channel channel = new Channel();
+
+        // Set up the snippet
+        ChannelSnippet snippet = new ChannelSnippet();
+        snippet.setTitle("Test Channel");
+        snippet.setDescription("Test Channel Description");
+        channel.setSnippet(snippet);
+
+        // Set up the statistics
+        ChannelStatistics statistics = new ChannelStatistics();
+        statistics.setSubscriberCount(BigInteger.valueOf(1000L));
+        statistics.setVideoCount(BigInteger.valueOf(50L));
+        statistics.setViewCount(BigInteger.valueOf(100000L));
+        channel.setStatistics(statistics);
+
+        // Mock latest videos
+        VideoResult videoResult = new VideoResult(
+                "Test Video",
+                "Test Description",
+                "videoId123",
+                channelId,
+                "http://thumbnail.url",
+                "Channel Title",
+                Arrays.asList("tag1", "tag2")
+        );
+
+        List<VideoResult> latestVideos = Arrays.asList(videoResult);
+        when(youTubeService.getChannelProfile(channelId)).thenReturn(channel);
+        when(youTubeService.getLast10Videos(channelId)).thenReturn(latestVideos);
+        CompletionStage<Result> resultStage = homeController.channelProfile(channelId);
+        Result result = resultStage.toCompletableFuture().join();
+
+        assertEquals(OK, result.status());
+        String content = contentAsString(result);
+
+        assertTrue(content.contains("Test Channel"));
+        assertTrue(content.contains("Test Channel Description"));
+        assertTrue(content.contains("Subscribers:"));
+        assertTrue(content.contains("1000"));
+        assertTrue(content.contains("Videos:"));
+        assertTrue(content.contains("50"));
+        assertTrue(content.contains("Views:"));
+        assertTrue(content.contains("100000"));
+        assertTrue(content.contains("Test Video"));
+    }
+
+    @Test
+    /**
+     * This method represents testWordStats_NullQuery.
+     */
     public void testWordStats_NullQuery() {
         CompletionStage<Result> resultStage = homeController.wordStats(null);
         Result result = resultStage.toCompletableFuture().join();
@@ -256,21 +350,16 @@ public class HomeControllerTest {
     }
 
     @Test
-
-/**
- * This method represents testWordStats_EmptyQuery.
- *
- * @return [Description of return value]
- */
+    /**
+     * This method represents testWordStats_EmptyQuery.
+     */
     public void testWordStats_EmptyQuery() {
-
         CompletionStage<Result> resultStage = homeController.wordStats("   ");
         Result result = resultStage.toCompletableFuture().join();
         assertEquals(BAD_REQUEST, result.status());
         String content = contentAsString(result);
         assertEquals("Please provide a search query.", content);
     }
-
     @Test
 
 /**

@@ -20,7 +20,10 @@ lazy val root = (project in file("."))
       "junit" % "junit" % "4.13.2" % Test, // JUnit for tests
       "org.mockito" %% "mockito-scala" % "1.16.55" % Test,
       "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
-      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2"
+      "org.scala-lang.modules" %% "scala-java8-compat" % "1.0.2",
+      "com.typesafe.akka" %% "akka-actor-typed" % "2.6.20",
+      "com.typesafe.akka" %% "akka-testkit" % "2.6.20" % Test,
+      "org.junit.jupiter" % "junit-jupiter" % "5.9.2" % Test // Removed trailing comma here
     ),
     jacocoExcludes := Seq(
       "views.*",
@@ -33,11 +36,9 @@ lazy val root = (project in file("."))
       "controllers.ReverseHomeController",
       ".*\\.template\\.scala",
       // Exclude synthetic Scala templates
-      ".*\\$Lambda\\$.*",
+      ".\\$Lambda\\$.",
       // Exclude synthetic lambda classes
-      "**/*$*.class"
+      "/$.class"
       // Exclude synthetic lambda classes
     )
-
-
   )
