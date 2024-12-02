@@ -16,12 +16,8 @@ import java.util.stream.Collectors;
  * Provides methods for fetching video details, channel profiles, and search results.
  */
 public class YouTubeService {
-<<<<<<< HEAD
-    private static final String API_KEY = "AIzaSyBTIpHIbq_TpejUrJI55qM8qKasiLJYRxo"; // Replace with your actual API key
-=======
 
     private static final String API_KEY = "AIzaSyAe7aBw3usdV4b3GaCvO23BBkXog7ro-aU"; // Replace with your actual API key
->>>>>>> 157217f3cd104039914b96a1dc94064e04f3b3ea
     private static final String APPLICATION_NAME = "TubeLytics";
     private static final long MAX_RESULTS = 10;
     private final YouTube youtube;

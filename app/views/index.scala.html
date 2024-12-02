@@ -31,10 +31,10 @@ implicit val reqHeader: RequestHeader = request.asScala()
         const query = document.getElementById('searchQuery').value;
 
         // Initialize data for the search term if not present
-
+        if (!resultData[query]) {
             resultData[query] = { videos: [] };
             createSearchTermSection(query); // Create a new section for this term
-
+        }
 
         // Start WebSocket for live updates
         startWebSocket(query);
