@@ -402,15 +402,4 @@ public class WordStatsActorTest {
             verify(mockYouTubeService, times(1)).searchVideos("empty_and_valid");
         }};
     }
-
-
-
-
-
-
-
-
-
-
-
 }
