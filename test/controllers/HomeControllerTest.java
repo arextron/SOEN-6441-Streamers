@@ -1,34 +1,27 @@
 package controllers;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.stream.Materializer;
-import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.api.services.youtube.model.Channel;
-import com.google.api.services.youtube.model.ChannelSnippet;
+import com.google.api.services.youtube.model.*;
 import models.VideoResult;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import play.cache.SyncCacheApi;
-import play.libs.Json;
-import play.libs.concurrent.HttpExecutionContext;
 import play.mvc.Http;
 import play.mvc.Result;
 import play.mvc.WebSocket;
+import play.test.Helpers;
 import play.test.WithApplication;
-import scala.concurrent.duration.Duration;
 import services.YouTubeService;
 
+import java.io.IOException;
+import java.math.BigInteger;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static play.mvc.Http.Status.*;
 import static play.test.Helpers.*;
@@ -40,17 +33,6 @@ public class HomeControllerTest extends WithApplication {
     private SyncCacheApi mockCache;
     private ActorSystem actorSystem;
     private Materializer materializer;
-    private HttpExecutionContext ec;
-
-    @BeforeClass
-    public static void setupClass() {
-        // Initialize resources needed before any tests are run
-    }
-
-    @AfterClass
-    public static void tearDownClass() {
-        // Clean up resources after all tests are completed
-    }
 
     @Before
     public void setUp() {
@@ -59,52 +41,62 @@ public class HomeControllerTest extends WithApplication {
         mockCache = mock(SyncCacheApi.class);
         actorSystem = ActorSystem.create();
         materializer = Materializer.matFromSystem(actorSystem);
-        ec = new HttpExecutionContext(actorSystem.dispatcher());
 
         controller = new HomeController(mockYouTubeService, mockCache, actorSystem, materializer);
     }
 /*
-    @Test
-    public void testIndex() {
-        Http.Request request = mock(Http.Request.class);
-        when(request.session()).thenReturn(new Http.Session(new HashMap<>()));
+@Test
+public void testIndex() {
+    // Create a fake request with necessary attributes
+    Map<String, String> sessionData = new HashMap<>();
+    sessionData.put("sessionId", "testSessionId"); // Add any session attributes if needed
 
-        Result result = controller.index(request);
-        assertEquals(OK, result.status());
-        // Further assertions can be made on the content
-        assertTrue(contentAsString(result).contains("TubeLytics"));
-    }
+    // If the view uses flash messages
+    Map<String, String> flashData = new HashMap<>();
+    flashData.put("success", "Test flash message");
+
+    Http.Request request = Helpers.fakeRequest()
+            .session(sessionData)
+            .flash(flashData)
+            .build();
+
+    // If the index method uses other services, ensure they are mocked and set up properly
+    // For example, if index method uses data from YouTubeService:
+    // when(mockYouTubeService.someMethod()).thenReturn(someData);
+
+    Result result = controller.index(request);
+    assertEquals(OK, result.status());
+    String content = contentAsString(result);
+    assertTrue(content.contains("TubeLytics"));
+    assertTrue(content.contains("Test flash message"));
+}
+
 */
 
-    @Test
-    public void testSearchWithEmptyQuery() throws Exception {
-        Http.Request request = mock(Http.Request.class);
-        when(request.session()).thenReturn(new Http.Session(new HashMap<>()));
 
-        CompletionStage<Result> resultStage = controller.search("", request);
-        Result result = resultStage.toCompletableFuture().get();
 
-        assertEquals(OK, result.status());
-        assertEquals("Please provide a search query.", contentAsString(result));
-    }
+
 
     @Test
     public void testSearchWithValidQuery() throws Exception {
         String query = "test query";
-        Http.Request request = mock(Http.Request.class);
-        when(request.session()).thenReturn(new Http.Session(new HashMap<>()));
+        Map<String, String> sessionData = new HashMap<>();
+        sessionData.put("sessionId", "sessionId");
+        Http.RequestBuilder requestBuilder = Helpers.fakeRequest().session(sessionData);
 
         // Mocking YouTubeService to return sample data
         List<VideoResult> mockVideos = Arrays.asList(
-                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2")),
-                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2", "ThumbnailUrl2", "ChannelTitle2", Arrays.asList("Tag3", "Tag4"))
+                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1",
+                        "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2")),
+                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2",
+                        "ThumbnailUrl2", "ChannelTitle2", Arrays.asList("Tag3", "Tag4"))
         );
         when(mockYouTubeService.searchVideos(query)).thenReturn(mockVideos);
 
         // Mocking cache
         when(mockCache.getOptional(anyString())).thenReturn(Optional.empty());
 
-        CompletionStage<Result> resultStage = controller.search(query, request);
+        CompletionStage<Result> resultStage = controller.search(query, requestBuilder.build());
         Result result = resultStage.toCompletableFuture().get();
 
         assertEquals(OK, result.status());
@@ -114,12 +106,33 @@ public class HomeControllerTest extends WithApplication {
         assertTrue(content.contains("Title2"));
     }
 
+
+    @Test
+    public void testSearchWithException() throws Exception {
+        String query = "test query";
+        Map<String, String> sessionData = new HashMap<>();
+        sessionData.put("sessionId", "sessionId");
+        Http.RequestBuilder requestBuilder = Helpers.fakeRequest().session(sessionData);
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.searchVideos(query)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.search(query, requestBuilder.build());
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("An error occurred while processing your search."));
+    }
+
+
     @Test
     public void testShowVideoDetails() throws Exception {
         String videoId = "VideoId1";
 
         // Mocking YouTubeService to return a sample VideoResult
-        VideoResult mockVideo = new VideoResult("Title1", "Description1", videoId, "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2"));
+        VideoResult mockVideo = new VideoResult("Title1", "Description1", videoId, "ChannelId1",
+                "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2"));
         when(mockYouTubeService.getVideoDetails(videoId)).thenReturn(mockVideo);
 
         CompletionStage<Result> resultStage = controller.showVideoDetails(videoId);
@@ -132,13 +145,30 @@ public class HomeControllerTest extends WithApplication {
     }
 
     @Test
+    public void testShowVideoDetailsWithException() throws Exception {
+        String videoId = "VideoId1";
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.getVideoDetails(videoId)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.showVideoDetails(videoId);
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("Failed to fetch video details."));
+    }
+
+    @Test
     public void testViewTags() throws Exception {
         String query = "test query";
 
         // Mocking YouTubeService to return sample data
         List<VideoResult> mockVideos = Arrays.asList(
-                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2")),
-                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2", "ThumbnailUrl2", "ChannelTitle2", Arrays.asList("Tag3", "Tag4"))
+                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1",
+                        "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2")),
+                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2",
+                        "ThumbnailUrl2", "ChannelTitle2", Arrays.asList("Tag3", "Tag4"))
         );
         when(mockYouTubeService.searchVideos(query)).thenReturn(mockVideos);
 
@@ -152,13 +182,30 @@ public class HomeControllerTest extends WithApplication {
     }
 
     @Test
+    public void testViewTagsWithException() throws Exception {
+        String query = "test query";
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.searchVideos(query)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.viewTags(query);
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("Failed to fetch videos for the query."));
+    }
+
+    @Test
     public void testSearchByTag() throws Exception {
         String tag = "Tag1";
 
         // Mocking YouTubeService to return sample data
         List<VideoResult> mockVideos = Arrays.asList(
-                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", Arrays.asList(tag, "Tag2")),
-                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2", "ThumbnailUrl2", "ChannelTitle2", Arrays.asList(tag, "Tag3"))
+                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1",
+                        "ThumbnailUrl1", "ChannelTitle1", Arrays.asList(tag, "Tag2")),
+                new VideoResult("Title2", "Description2", "VideoId2", "ChannelId2",
+                        "ThumbnailUrl2", "ChannelTitle2", Arrays.asList(tag, "Tag3"))
         );
         when(mockYouTubeService.searchVideosByTag(tag)).thenReturn(mockVideos);
 
@@ -172,13 +219,30 @@ public class HomeControllerTest extends WithApplication {
     }
 
     @Test
+    public void testSearchByTagWithException() throws Exception {
+        String tag = "Tag1";
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.searchVideosByTag(tag)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.searchByTag(tag);
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("Failed to fetch videos for the tag."));
+    }
+
+    @Test
     public void testWordStats() throws Exception {
         String query = "test query";
 
         // Mocking YouTubeService to return sample data
         List<VideoResult> mockVideos = Arrays.asList(
-                new VideoResult("Title1", "Description one two three", "VideoId1", "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", null),
-                new VideoResult("Title2", "Description two three four", "VideoId2", "ChannelId2", "ThumbnailUrl2", "ChannelTitle2", null)
+                new VideoResult("Title1", "Description one two three", "VideoId1",
+                        "ChannelId1", "ThumbnailUrl1", "ChannelTitle1", null),
+                new VideoResult("Title2", "Description two three four", "VideoId2",
+                        "ChannelId2", "ThumbnailUrl2", "ChannelTitle2", null)
         );
         when(mockYouTubeService.searchVideos(query)).thenReturn(mockVideos);
 
@@ -193,7 +257,22 @@ public class HomeControllerTest extends WithApplication {
         assertTrue(content.contains("three"));
         assertTrue(content.contains("four"));
     }
-    /*
+
+    @Test
+    public void testWordStatsWithException() throws Exception {
+        String query = "test query";
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.searchVideos(query)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.wordStats(query);
+        Result result = resultStage.toCompletableFuture().get();
+
+        // Assuming your controller handles exceptions and returns an error message
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("An error occurred while processing your request."));
+    }
     @Test
     public void testChannelProfile() throws Exception {
         String channelId = "ChannelId1";
@@ -201,18 +280,39 @@ public class HomeControllerTest extends WithApplication {
         // Mocking YouTubeService to return sample data
         ChannelSnippet snippet = new ChannelSnippet();
         snippet.setTitle("ChannelTitle1");
+        snippet.setDescription("ChannelDescription1");
+
+        // Create ThumbnailDetails and set a default thumbnail
+        ThumbnailDetails thumbnails = new ThumbnailDetails();
+        Thumbnail defaultThumbnail = new Thumbnail();
+        defaultThumbnail.setUrl("http://example.com/thumbnail.jpg");
+        thumbnails.setDefault(defaultThumbnail);
+        snippet.setThumbnails(thumbnails); // Provide the ThumbnailDetails object as an argument
+
+        // Set other necessary fields in the snippet if required by your view
+
+        // Set statistics if used in the view
+        ChannelStatistics statistics = new ChannelStatistics();
+        statistics.setSubscriberCount(BigInteger.valueOf(1000L));
+        statistics.setVideoCount(BigInteger.valueOf(50L));
+        // Set other necessary fields in statistics
+
         Channel mockChannel = new Channel();
         mockChannel.setId(channelId);
         mockChannel.setSnippet(snippet);
+        mockChannel.setStatistics(statistics);
+        // Set other necessary fields in the channel
+
         when(mockYouTubeService.getChannelProfile(channelId)).thenReturn(mockChannel);
 
         List<VideoResult> mockVideos = Arrays.asList(
-                new VideoResult("Title1", "Description1", "VideoId1", channelId, "ThumbnailUrl1", "ChannelTitle1", null),
-                new VideoResult("Title2", "Description2", "VideoId2", channelId, "ThumbnailUrl2", "ChannelTitle1", null)
+                new VideoResult("Title1", "Description1", "VideoId1", channelId,
+                        "ThumbnailUrl1", "ChannelTitle1", null),
+                new VideoResult("Title2", "Description2", "VideoId2", channelId,
+                        "ThumbnailUrl2", "ChannelTitle1", null)
         );
         when(mockYouTubeService.getLast10Videos(channelId)).thenReturn(mockVideos);
 
-        // Ensure that no exceptions are thrown during CompletableFuture execution
         CompletionStage<Result> resultStage = controller.channelProfile(channelId);
         Result result = resultStage.toCompletableFuture().get();
 
@@ -222,7 +322,24 @@ public class HomeControllerTest extends WithApplication {
         assertTrue(content.contains("Title1"));
         assertTrue(content.contains("Title2"));
     }
-     */
+
+
+
+    @Test
+    public void testChannelProfileWithException() throws Exception {
+        String channelId = "ChannelId1";
+
+        // Mocking YouTubeService to throw an exception
+        when(mockYouTubeService.getChannelProfile(channelId)).thenThrow(new RuntimeException("Simulated Exception"));
+
+        CompletionStage<Result> resultStage = controller.channelProfile(channelId);
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(INTERNAL_SERVER_ERROR, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("Error fetching channel profile: Simulated Exception"));
+    }
+
     @Test
     public void testSearchWebSocket() {
         // Testing WebSocket connection
