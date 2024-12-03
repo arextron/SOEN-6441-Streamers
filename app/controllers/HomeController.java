@@ -43,7 +43,7 @@ public class HomeController extends Controller {
     private final Materializer materializer;
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
     // Cache for storing search results
-    private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+    public Map<String, List<VideoResult>> videoCache = new HashMap<>();
 
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
@@ -127,32 +127,36 @@ public class HomeController extends Controller {
 
         // If not in cache, fetch from YouTube API and store in cache
         return CompletableFuture.supplyAsync(() -> {
-            List<VideoResult> videos = youTubeService.searchVideos(query);
+            try {
+                List<VideoResult> videos = youTubeService.searchVideos(query);
 
-            // Process videos and limit to first 10 with non-empty descriptions
-            List<VideoResult> processedVideos = videos.stream()
-                    .filter(video -> !video.getDescription().isEmpty())
-                    .limit(10)
-                    .collect(Collectors.toList());
+                // Process videos and limit to first 10 with non-empty descriptions
+                List<VideoResult> processedVideos = videos.stream()
+                        .filter(video -> !video.getDescription().isEmpty())
+                        .limit(10)
+                        .collect(Collectors.toList());
 
-            // Retrieve or initialize session-specific search history
-            LinkedList<Map.Entry<String, List<VideoResult>>> sessionSearchHistory = cache.getOptional(cacheKey)
-                    .map(obj -> (LinkedList<Map.Entry<String, List<VideoResult>>>) obj)
-                    .orElseGet(LinkedList::new);
+                // Retrieve or initialize session-specific search history
+                LinkedList<Map.Entry<String, List<VideoResult>>> sessionSearchHistory = cache.getOptional(cacheKey)
+                        .map(obj -> (LinkedList<Map.Entry<String, List<VideoResult>>>) obj)
+                        .orElseGet(LinkedList::new);
 
-            // Store the result in the cache
-            videoCache.put(query, processedVideos);
+                // Store the result in the cache
+                videoCache.put(query, processedVideos);
 
-            // Add to search history
-            sessionSearchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
-            if (sessionSearchHistory.size() > 10) {
-                sessionSearchHistory.removeLast();
+                // Add to search history
+                sessionSearchHistory.addFirst(new AbstractMap.SimpleEntry<>(query, processedVideos));
+                if (sessionSearchHistory.size() > 10) {
+                    sessionSearchHistory.removeLast();
+                }
+
+                // Save the updated history in cache
+                cache.set(cacheKey, sessionSearchHistory);
+
+                return ok(results.render(sessionSearchHistory, request)).addingToSession(request, "sessionId", sessionId);
+            } catch (Exception e) {
+                return internalServerError("An error occurred while processing your search.");
             }
-
-            // Save the updated history in cache
-            cache.set(cacheKey, sessionSearchHistory);
-
-            return ok(results.render(sessionSearchHistory, request)).addingToSession(request, "sessionId", sessionId);
         });
     }
 
@@ -303,10 +307,14 @@ public class HomeController extends Controller {
                 // Render view with the fetched data
                 return ok(views.html.channelProfile.render(channel, videos));
             } catch (Exception e) {
+                e.printStackTrace(); // Add this line to print the exception stack trace
                 return internalServerError("Error fetching channel profile: " + e.getMessage());
             }
         });
     }
 
+    public void setVideoCache(Map<String, List<VideoResult>> videoCache) {
+        this.videoCache = videoCache; // Compilation error here
+    }
 
 }
