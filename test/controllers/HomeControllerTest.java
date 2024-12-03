@@ -1,12 +1,19 @@
 package controllers;
+import java.lang.reflect.Field;
 
+import actors.UserActor;
+import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.stream.Materializer;
+import akka.stream.OverflowStrategy;
+import akka.stream.scaladsl.Flow;
+import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.api.services.youtube.model.*;
 import models.VideoResult;
 import org.junit.Before;
 import org.junit.Test;
+import play.api.libs.streams.ActorFlow;
 import play.cache.SyncCacheApi;
 import play.mvc.Http;
 import play.mvc.Result;
@@ -44,38 +51,73 @@ public class HomeControllerTest extends WithApplication {
 
         controller = new HomeController(mockYouTubeService, mockCache, actorSystem, materializer);
     }
-/*
-@Test
-public void testIndex() {
-    // Create a fake request with necessary attributes
-    Map<String, String> sessionData = new HashMap<>();
-    sessionData.put("sessionId", "testSessionId"); // Add any session attributes if needed
 
-    // If the view uses flash messages
-    Map<String, String> flashData = new HashMap<>();
-    flashData.put("success", "Test flash message");
+    @Test
+    public void testSearchWithEmptyQuery() throws Exception {
+        Http.Request request = Helpers.fakeRequest().build();
+        CompletionStage<Result> resultStage = controller.search("", request);
+        Result result = resultStage.toCompletableFuture().get();
+        assertEquals(OK, result.status());
+        assertEquals("Please provide a search query.", contentAsString(result));
+    }
 
-    Http.Request request = Helpers.fakeRequest()
-            .session(sessionData)
-            .flash(flashData)
-            .build();
+    @Test
+    public void testSearchWithoutSessionId() throws Exception {
+        String query = "test query";
+        Http.Request request = Helpers.fakeRequest().build();
 
-    // If the index method uses other services, ensure they are mocked and set up properly
-    // For example, if index method uses data from YouTubeService:
-    // when(mockYouTubeService.someMethod()).thenReturn(someData);
+        // Mock YouTubeService to return sample data
+        List<VideoResult> mockVideos = Arrays.asList(
+                new VideoResult("Title1", "Description1", "VideoId1", "ChannelId1",
+                        "ThumbnailUrl1", "ChannelTitle1", Arrays.asList("Tag1", "Tag2"))
+        );
+        when(mockYouTubeService.searchVideos(query)).thenReturn(mockVideos);
 
-    Result result = controller.index(request);
-    assertEquals(OK, result.status());
-    String content = contentAsString(result);
-    assertTrue(content.contains("TubeLytics"));
-    assertTrue(content.contains("Test flash message"));
-}
+        // Mock cache
+        when(mockCache.getOptional(anyString())).thenReturn(Optional.empty());
 
-*/
+        CompletionStage<Result> resultStage = controller.search(query, request);
+        Result result = resultStage.toCompletableFuture().get();
 
+        assertEquals(OK, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("Title1"));
 
+        // Verify that a new session ID was generated and added to the session
+        Optional<String> newSessionId = result.session().getOptional("sessionId");
+        assertTrue(newSessionId.isPresent());
+    }
+    @Test
+    public void testSearchWithCachedQuery() throws Exception {
+        String query = "test query";
+        Map<String, String> sessionData = new HashMap<>();
+        sessionData.put("sessionId", "sessionId");
+        Http.Request request = Helpers.fakeRequest().session(sessionData).build();
 
+        // Prepare cached videos
+        List<VideoResult> cachedVideos = Arrays.asList(
+                new VideoResult("CachedTitle1", "CachedDescription1", "CachedVideoId1",
+                        "CachedChannelId1", "CachedThumbnailUrl1", "CachedChannelTitle1", null)
+        );
 
+        // Use reflection to access the private final videoCache field
+        Field videoCacheField = HomeController.class.getDeclaredField("videoCache");
+        videoCacheField.setAccessible(true);
+        Map<String, List<VideoResult>> videoCache = (Map<String, List<VideoResult>>) videoCacheField.get(controller);
+
+        // Add the cached query to the videoCache
+        videoCache.put(query, cachedVideos);
+
+        // Mock cache
+        when(mockCache.getOptional(anyString())).thenReturn(Optional.empty());
+
+        CompletionStage<Result> resultStage = controller.search(query, request);
+        Result result = resultStage.toCompletableFuture().get();
+
+        assertEquals(OK, result.status());
+        String content = contentAsString(result);
+        assertTrue(content.contains("CachedTitle1"));
+    }
 
     @Test
     public void testSearchWithValidQuery() throws Exception {
@@ -338,14 +380,5 @@ public void testIndex() {
         assertEquals(INTERNAL_SERVER_ERROR, result.status());
         String content = contentAsString(result);
         assertTrue(content.contains("Error fetching channel profile: Simulated Exception"));
-    }
-
-    @Test
-    public void testSearchWebSocket() {
-        // Testing WebSocket connection
-        // Note: Testing WebSockets can be complex; this is a simplified example
-        WebSocket webSocket = controller.searchWebSocket();
-        assertNotNull(webSocket);
-        // Further testing would involve setting up a WebSocket client and server
     }
 }
