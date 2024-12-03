@@ -1,97 +1,67 @@
-// We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
-// Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
+//We certify that this submission is the original work of the members of the group and meets the Faculty's Expectations of Originality.
+//Signed by- Aryan Awasthi, Harsukhvir Singh Grewal, Sharun Basnet
 // 40278847, 40310953, 40272435
-
 package controllers;
-
-import actors.TagsActor;
-import actors.UserActor;
 import actors.WordStatsActor;
+import actors.TagsActor;
 import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.stream.Materializer;
 import akka.stream.OverflowStrategy;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.api.services.youtube.model.Channel;
-import models.VideoResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import play.cache.SyncCacheApi;
-import play.i18n.MessagesApi;
 import play.libs.Json;
 import play.libs.streams.ActorFlow;
-import play.mvc.*;
+import actors.UserActor;
+import models.VideoResult;
 import services.YouTubeService;
+import play.mvc.*;
 import views.html.index;
 import views.html.results;
 import views.html.videoDetails;
-
+import play.cache.SyncCacheApi;
+import com.google.api.services.youtube.model.Channel;
 import javax.inject.Inject;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import akka.actor.ActorSystem;
+import akka.stream.Materializer;
+import play.mvc.WebSocket;
+import akka.pattern.Patterns;
+import play.mvc.Controller;
+import play.mvc.Result;
 
-/**
- * Controller class for handling YouTube video search, video details, and word statistics.
- */
+import java.util.List;
+
 public class HomeController extends Controller {
 
     private final YouTubeService youTubeService;
     private final SyncCacheApi cache;
     private final ActorSystem actorSystem;
     private final Materializer materializer;
-    private final ActorRef tagsActor;
-    private final MessagesApi messagesApi;
-
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
-
     // Cache for storing search results
-    final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+    private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+
+    private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
     /**
      * Constructor for HomeController.
      *
      * @param youTubeService Service to interact with YouTube API.
-     * @param cache          The cache API to store search history and results.
-     * @param actorSystem    The ActorSystem for creating actors.
-     * @param materializer   The Materializer for Akka streams.
-     * @param messagesApi    The MessagesApi for internationalization.
+     * @param cache The cache API to store search history and results.
      */
-    @Inject
-    public HomeController(YouTubeService youTubeService, SyncCacheApi cache, ActorSystem actorSystem, Materializer materializer, MessagesApi messagesApi) {
-        this(youTubeService, cache, actorSystem, materializer, null, messagesApi);
-    }
 
-    /**
-     * Overloaded constructor to allow injection of a custom TagsActor for testing purposes.
-     *
-     * @param youTubeService Service to interact with YouTube API.
-     * @param cache          The cache API to store search history and results.
-     * @param actorSystem    The ActorSystem for creating actors.
-     * @param materializer   The Materializer for Akka streams.
-     * @param tagsActor      The TagsActor to use; if null, a new one is created.
-     * @param messagesApi    The MessagesApi for internationalization.
-     */
-    public HomeController(YouTubeService youTubeService, SyncCacheApi cache, ActorSystem actorSystem, Materializer materializer, ActorRef tagsActor, MessagesApi messagesApi) {
+    @Inject
+    public HomeController(YouTubeService youTubeService, SyncCacheApi cache, ActorSystem actorSystem, Materializer materializer) {
         this.youTubeService = youTubeService;
         this.cache = cache;
         this.actorSystem = actorSystem;
         this.materializer = materializer;
-        this.messagesApi = messagesApi;
-        if (tagsActor != null) {
-            this.tagsActor = tagsActor;
-        } else {
-            this.tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService), "tagsActor");
-        }
     }
 
-    /**
-     * Provides a WebSocket for real-time search updates.
-     *
-     * @return A WebSocket.
-     */
     public WebSocket searchWebSocket() {
         return WebSocket.Text.accept(request -> {
             return ActorFlow.actorRef(
@@ -111,13 +81,13 @@ public class HomeController extends Controller {
      * @return The rendered homepage.
      */
     public Result index(Http.Request request) {
-        return ok(index.render("YT Lytics", request));
+        return ok(index.render("TubeLytics", request));
     }
 
     /**
-     * Handles the search request, displays video results, and updates search history.
+     * Handles the search request, displays video results and updates search history.
      *
-     * @param query   The search query entered by the user.
+     * @param query The search query entered by the user.
      * @param request The HTTP request object.
      * @return A CompletionStage that returns the rendered search results.
      */
@@ -186,6 +156,7 @@ public class HomeController extends Controller {
         });
     }
 
+
     /**
      * Displays video details, including tags.
      *
@@ -193,7 +164,9 @@ public class HomeController extends Controller {
      * @return A CompletionStage that returns the rendered video details.
      */
     public CompletionStage<Result> showVideoDetails(String videoId) {
-        CompletionStage<Object> futureResult = akka.pattern.Patterns.ask(
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
+
+        CompletionStage<Object> futureResult = Patterns.ask(
                 tagsActor,
                 new TagsActor.ViewVideoDetails(videoId),
                 Duration.ofSeconds(5)
@@ -216,7 +189,9 @@ public class HomeController extends Controller {
      * @return A CompletionStage rendering videos related to the query.
      */
     public CompletionStage<Result> viewTags(String query) {
-        CompletionStage<Object> futureResult = akka.pattern.Patterns.ask(
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
+
+        CompletionStage<Object> futureResult = Patterns.ask(
                 tagsActor,
                 new TagsActor.ViewTags(query),
                 Duration.ofSeconds(5)
@@ -233,6 +208,7 @@ public class HomeController extends Controller {
         });
     }
 
+
     /**
      * Fetch videos related to a specific tag and render them.
      *
@@ -240,47 +216,25 @@ public class HomeController extends Controller {
      * @return A CompletionStage rendering videos associated with the tag.
      */
     public CompletionStage<Result> searchByTag(String tag) {
-        if (tag == null || tag.trim().isEmpty()) {
-            logger.warn("Received a null or empty tag for search.");
-            return CompletableFuture.completedFuture(badRequest("Tag must not be empty."));
-        }
+        ActorRef tagsActor = actorSystem.actorOf(TagsActor.props(youTubeService));
 
-        if (tagsActor == null) {
-            logger.error("TagsActor is not initialized.");
-            return CompletableFuture.completedFuture(internalServerError("TagsActor not initialized."));
-        }
+        CompletionStage<Object> futureResult = Patterns.ask(
+                tagsActor,
+                new TagsActor.SearchByTag(tag),
+                Duration.ofSeconds(5)
+        );
 
-        try {
-            return akka.pattern.Patterns.ask(tagsActor, new TagsActor.SearchByTag(tag), Duration.ofSeconds(5))
-                    .thenApply(response -> {
-                        if (response instanceof List) {
-                            @SuppressWarnings("unchecked")
-                            List<VideoResult> videos = (List<VideoResult>) response;
-                            if (videos.isEmpty()) {
-                                logger.info("No results found for tag: {}", tag);
-                                return notFound("No results found for the specified tag.");
-                            } else {
-                                logger.info("Search results found for tag: {}", tag);
-                                return ok(Json.toJson(videos));
-                            }
-                        } else if (response instanceof TagsActor.ErrorMessage) {
-                            TagsActor.ErrorMessage errorMessage = (TagsActor.ErrorMessage) response;
-                            logger.error("Error occurred while searching by tag: {} - {}", tag, errorMessage.message);
-                            return internalServerError(errorMessage.message);
-                        } else {
-                            logger.info("No results found for tag: {}", tag);
-                            return notFound("No results found for the specified tag.");
-                        }
-                    })
-                    .exceptionally(ex -> {
-                        logger.error("Error occurred while searching by tag: {}", tag, ex);
-                        return internalServerError("An error occurred while processing your request.");
-                    });
-        } catch (Exception e) {
-            logger.error("Unexpected error in searchByTag method for tag: {}", tag, e);
-            return CompletableFuture.completedFuture(internalServerError("An unexpected error occurred."));
-        }
+        return futureResult.thenApply(response -> {
+            if (response instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<VideoResult> videos = (List<VideoResult>) response;
+                return ok(views.html.tagResults.render(tag, videos));
+            } else {
+                return internalServerError("Failed to fetch videos for the tag.");
+            }
+        });
     }
+
 
     /**
      * Generates word statistics for a given search query.
@@ -327,11 +281,17 @@ public class HomeController extends Controller {
         });
     }
 
+
     /**
      * Displays the channel profile page along with the latest videos.
      *
      * @param channelId The ID of the YouTube channel.
      * @return A CompletionStage that returns the rendered channel profile page.
+     */
+    /**
+     * Renders the channel profile page.
+     * @param channelId The ID of the channel to display.
+     * @return A CompletionStage that renders the profile view.
      */
     public CompletionStage<Result> channelProfile(String channelId) {
         return CompletableFuture.supplyAsync(() -> {
@@ -347,4 +307,6 @@ public class HomeController extends Controller {
             }
         });
     }
+
+
 }
