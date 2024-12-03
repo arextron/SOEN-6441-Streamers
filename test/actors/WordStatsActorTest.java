@@ -18,8 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 public class WordStatsActorTest {
@@ -190,7 +189,217 @@ public class WordStatsActorTest {
             verify(mockYouTubeService, times(1)).searchVideos("");
         }};
     }
+    @Test
+    public void testFilterVideosWithEmptyDescriptions() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Arrays.asList(
+                    new VideoResult("Title1", "", "videoId1", "channelId1", "channelTitle1", "thumbnailUrl", Collections.emptyList()),
+                    new VideoResult("Title2", "Valid description", "videoId2", "channelId2", "channelTitle2", "thumbnailUrl", Collections.emptyList())
+            );
 
+            when(mockYouTubeService.searchVideos("filter_empty")).thenReturn(videoResults);
 
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("filter_empty", getRef());
 
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals(1, jsonResponse.get("valid").asLong());
+            assertEquals(1, jsonResponse.get("description").asLong());
+            verify(mockYouTubeService, times(1)).searchVideos("filter_empty");
+        }};
+    }
+    @Test
+    public void testLimitToFiftyVideos() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = IntStream.range(0, 100)
+                    .mapToObj(i -> new VideoResult(
+                            "Title" + i,
+                            "Description " + i,
+                            "videoId" + i,
+                            "channelId" + i,
+                            "channelTitle " + i,
+                            "thumbnailUrl",
+                            Collections.emptyList()
+                    ))
+                    .collect(Collectors.toList());
+
+            when(mockYouTubeService.searchVideos("limit_50")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("limit_50", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertTrue(jsonResponse.size() <= 50);
+            verify(mockYouTubeService, times(1)).searchVideos("limit_50");
+        }};
+    }
+    @Test
+    public void testSplitDescriptionsIntoWords() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Collections.singletonList(
+                    new VideoResult(
+                            "Title1",
+                            "Word1, Word2; Word3!?",
+                            "videoId1",
+                            "channelId1",
+                            "channelTitle1",
+                            "thumbnailUrl",
+                            Collections.emptyList()
+                    )
+            );
+
+            when(mockYouTubeService.searchVideos("split_words")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("split_words", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals(1, jsonResponse.get("word1").asLong());
+            assertEquals(1, jsonResponse.get("word2").asLong());
+            assertEquals(1, jsonResponse.get("word3").asLong());
+            verify(mockYouTubeService, times(1)).searchVideos("split_words");
+        }};
+    }
+    @Test
+    public void testExceptionHandling() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            when(mockYouTubeService.searchVideos("exception")).thenThrow(new RuntimeException("Test exception"));
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("exception", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals("An error occurred while processing your request.", jsonResponse.get("error").asText());
+            verify(mockYouTubeService, times(1)).searchVideos("exception");
+        }};
+    }
+    @Test
+    public void testFilterEmptyWords() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Collections.singletonList(
+                    new VideoResult(
+                            "Title1",
+                            "   !! !",
+                            "videoId1",
+                            "channelId1",
+                            "channelTitle1",
+                            "thumbnailUrl",
+                            Collections.emptyList()
+                    )
+            );
+
+            when(mockYouTubeService.searchVideos("empty_words")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("empty_words", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertTrue(jsonResponse.isEmpty());
+            verify(mockYouTubeService, times(1)).searchVideos("empty_words");
+        }};
+    }
+    @Test
+    public void testSortingWithTiedFrequencies() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Collections.singletonList(
+                    new VideoResult(
+                            "Title1",
+                            "word word tie tie",
+                            "videoId1",
+                            "channelId1",
+                            "channelTitle1",
+                            "thumbnailUrl",
+                            Collections.emptyList()
+                    )
+            );
+
+            when(mockYouTubeService.searchVideos("ties")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("ties", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals(2, jsonResponse.get("word").asLong());
+            assertEquals(2, jsonResponse.get("tie").asLong());
+            verify(mockYouTubeService, times(1)).searchVideos("ties");
+        }};
+    }
+    @Test
+    public void testHandleRuntimeException() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            when(mockYouTubeService.searchVideos("runtime_exception"))
+                    .thenThrow(new RuntimeException("Simulated runtime exception"));
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("runtime_exception", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals("An error occurred while processing your request.", jsonResponse.get("error").asText());
+            verify(mockYouTubeService, times(1)).searchVideos("runtime_exception");
+        }};
+    }
+    @Test
+    public void testDuplicateWordFrequencyResolution() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Arrays.asList(
+                    new VideoResult("Title1", "duplicate duplicate", "videoId1", "channelId1", "channelTitle1", "thumbnailUrl", Collections.emptyList()),
+                    new VideoResult("Title2", "duplicate word", "videoId2", "channelId2", "channelTitle2", "thumbnailUrl", Collections.emptyList())
+            );
+
+            when(mockYouTubeService.searchVideos("duplicate_merge")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("duplicate_merge", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals(3, jsonResponse.get("duplicate").asLong());
+            assertEquals(1, jsonResponse.get("word").asLong());
+            verify(mockYouTubeService, times(1)).searchVideos("duplicate_merge");
+        }};
+    }
+    @Test
+    public void testFilterEmptyWordsAndValidWords() {
+        new TestKit(system) {{
+            YouTubeService mockYouTubeService = mock(YouTubeService.class);
+            List<VideoResult> videoResults = Collections.singletonList(
+                    new VideoResult("Title1", " valid  ", "videoId1", "channelId1", "channelTitle1", "thumbnailUrl", Collections.emptyList())
+            );
+
+            when(mockYouTubeService.searchVideos("empty_and_valid")).thenReturn(videoResults);
+
+            ActorRef wordStatsActor = system.actorOf(WordStatsActor.props(mockYouTubeService));
+            wordStatsActor.tell("empty_and_valid", getRef());
+
+            String response = expectMsgClass(String.class);
+            JsonNode jsonResponse = Json.parse(response);
+
+            assertEquals(1, jsonResponse.get("valid").asLong());
+            assertFalse(jsonResponse.has(""));
+            verify(mockYouTubeService, times(1)).searchVideos("empty_and_valid");
+        }};
+    }
 }

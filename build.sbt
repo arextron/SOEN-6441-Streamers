@@ -38,7 +38,8 @@ lazy val root = (project in file("."))
       // Exclude synthetic Scala templates
       ".*\\$Lambda\\$.*",
       // Exclude synthetic lambda classes
-      "**/*$*.class"
-      // Exclude synthetic lambda classes
+      "**/*$*.class",
+      // Exclude synthetic lambda classes,
+      "*lambda$computeWordStats$*"
     )
   )

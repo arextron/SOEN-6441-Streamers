@@ -381,4 +381,5 @@ public class HomeControllerTest extends WithApplication {
         String content = contentAsString(result);
         assertTrue(content.contains("Error fetching channel profile: Simulated Exception"));
     }
+
 }
