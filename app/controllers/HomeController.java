@@ -43,7 +43,7 @@ public class HomeController extends Controller {
     private final Materializer materializer;
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
     // Cache for storing search results
-    private final Map<String, List<VideoResult>> videoCache = new HashMap<>();
+    public final Map<String, List<VideoResult>> videoCache = new HashMap<>();
 
     private final LinkedList<Map.Entry<String, List<VideoResult>>> searchHistory = new LinkedList<>();
 
