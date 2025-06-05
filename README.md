@@ -1,4 +1,4 @@
-# TubeLytics v2 ( SOEN-6441 “Streamers” )
+# TubeLytics v2 
 
 A real-time, actor-driven YouTube analytics dashboard built with the **Play 2.8** framework, **Akka Actors/Streams**, and the **YouTube Data API v3**.  
 Originally created for Concordia University’s *SOEN-6441 – Software Engineering* course, the project showcases modern reactive‑web techniques (WebSockets, non-blocking I/O, caching) while providing an intuitive UI for exploring channels, videos, tags, and word-level statistics.
